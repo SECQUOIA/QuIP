@@ -23,11 +23,18 @@ the book scaffold is in place.
 
 ## Local book build
 
-1. Install the Jupyter Book dependencies:
+This repository uses `uv` for Python environment management. The book build and
+Python notebook tooling should be installed into the project virtual
+environment, not into the root Python installation.
+
+1. Create and sync the docs environment from the repository root:
 
    ```bash
-   python -m pip install -r requirements-book.txt
+   uv sync --group docs
    ```
+
+   This creates a project-local `.venv` and leaves the root Python
+   installation unchanged.
 
 2. Confirm the Node.js toolchain used by Jupyter Book 2 is available:
 
@@ -39,7 +46,14 @@ the book scaffold is in place.
 3. Build the site from the repository root:
 
    ```bash
-   jupyter book build --html --ci
+   uv run --group docs jupyter book build --html --ci
+   ```
+
+4. To work on the mathematical programming Python notebook locally, install its
+   Python dependencies into the same `uv` environment:
+
+   ```bash
+   uv sync --group mathprog
    ```
 
 The built site will be written to `_build/html/index.html`.

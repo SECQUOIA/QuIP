@@ -88,4 +88,21 @@ environment, not into the root Python installation.
    make verify-notebooks NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb notebooks_jl/2-QUBO.ipynb"
    ```
 
+7. To run the notebooks interactively, install an IJulia kernel for this repo
+   and then launch Jupyter:
+
+   ```bash
+   julia --project=./scripts -e 'import Pkg; Pkg.resolve(); Pkg.instantiate(); using IJulia; installkernel("QuIP Julia", "--project=$(abspath("notebooks_jl"))")'
+   uv run --group docs jupyter lab
+   ```
+
+   Then select:
+
+   - `Python 3` for notebooks under `notebooks_py/`
+   - `QuIP Julia` or another Julia kernel for notebooks under `notebooks_jl/`
+
+   If you see a Python `SyntaxError` on a line like
+   `IN_COLAB = haskey(ENV, ...) || ...`, the Julia notebook is running with the
+   wrong kernel.
+
 The built site will be written to `_build/html/index.html`.

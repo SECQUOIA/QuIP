@@ -78,6 +78,9 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.nbverify/
+.uv-cache/
+.julia-depot/
 
 # IPython
 profile_default/

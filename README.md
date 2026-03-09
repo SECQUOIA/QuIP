@@ -56,4 +56,22 @@ environment, not into the root Python installation.
    uv sync --group mathprog
    ```
 
+5. To verify notebook execution locally, use the repo targets:
+
+   ```bash
+   make verify-mathprog
+   ```
+
+   This executes the Python and Julia math programming notebooks through
+   `jupyter nbconvert` and writes the executed copies to `.nbverify/`.
+   The verification flow keeps the Python package cache in `.uv-cache/`, so it
+   does not depend on writing to a global `uv` cache. Julia writes temporary
+   package state to `.julia-depot/` while still reusing packages already
+   available in `~/.julia/`.
+   To verify a different set of notebooks, override `NOTEBOOKS`:
+
+   ```bash
+   make verify-notebooks NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb notebooks_jl/2-QUBO.ipynb"
+   ```
+
 The built site will be written to `_build/html/index.html`.

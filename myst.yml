@@ -35,3 +35,7 @@ site:
   template: book-theme
   options:
     folders: true
+  actions:
+    - title: Open in Colab
+      url: colab.html
+      static: true

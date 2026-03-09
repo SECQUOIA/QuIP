@@ -3,7 +3,6 @@ project:
   title: "QuIP: Quantum Integer Programming Notebooks"
   authors:
     - name: David E. Bernal Neira
-    - name: Pedro Maciel Xavier
   copyright: "2026"
   github: SECQUOIA/QuIP
   toc:

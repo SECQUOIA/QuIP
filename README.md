@@ -1,13 +1,15 @@
 # QuIP: Quantum Integer Programming Notebooks
 
-This repository collects the Julia and Python lecture notebooks used for
-quantum integer programming material. The repo now serves as the source for a
-single Jupyter Book built from the repository root and published through GitHub
-Pages.
+By David E. Bernal Neira  
+Davidson School of Chemical Engineering, Purdue University
 
-The first book release is intentionally static. Notebook execution is disabled
+This repository collects the Julia and Python lecture notebooks used for
+quantum integer programming material. It serves as the source for a single
+Jupyter Book built from the repository root and published through GitHub Pages.
+
+This first book release is intentionally static. Notebook execution is disabled
 in CI, several Python notebooks still lack committed outputs, and a broader
-cleanup pass on content, environments, and notebook structure will happen after
+cleanup pass on content, environments, and notebook structure will follow after
 the book scaffold is in place.
 
 ## Notebook map

@@ -1,0 +1,32 @@
+################################################################################
+# Jupyter Book configuration for the QuIP lecture notebooks
+# Docs: https://jupyterbook.org/en/stable/customize/config.html
+################################################################################
+
+title: "QuIP: Quantum Integer Programming Notebooks"
+author: David E. Bernal Neira · Davidson School of Chemical Engineering, Purdue University
+copyright: "2026"
+
+repository:
+  url: https://github.com/SECQUOIA/QuIP
+  path_to_book: .
+  branch: main
+
+execute:
+  execute_notebooks: "off"
+
+html:
+  use_repository_button: true
+  use_issues_button: true
+  use_edit_page_button: false
+  extra_navbar: |
+    Built with <a href="https://jupyterbook.org/">Jupyter Book</a>.
+
+launch_buttons:
+  colab_url: https://colab.research.google.com
+
+sphinx:
+  config:
+    html_show_copyright: false
+    suppress_warnings:
+      - "myst.xref_missing"

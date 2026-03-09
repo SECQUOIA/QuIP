@@ -1,4 +1,4 @@
-.PHONY: sysimage verify-notebooks verify-mathprog
+.PHONY: setup-julia sysimage verify-notebooks verify-mathprog
 
 UV ?= uv
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
@@ -8,6 +8,9 @@ JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
 
 NOTEBOOKS ?= notebooks_py/1-MathProg_python.ipynb notebooks_jl/1-MathProg.ipynb
+
+setup-julia:
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./notebooks_jl -e 'import Pkg; Pkg.resolve(); Pkg.instantiate()'
 
 sysimage:
 	$(JULIA) -e 'using InteractiveUtils; versioninfo()'

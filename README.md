@@ -56,7 +56,21 @@ environment, not into the root Python installation.
    uv sync --group mathprog
    ```
 
-5. To verify notebook execution locally, use the repo targets:
+5. To prepare the shared Julia notebook environment locally, use the repo
+   target instead of a bare `Pkg.instantiate()`:
+
+   ```bash
+   make setup-julia
+   ```
+
+   This disables Julia's automatic blanket precompile step while instantiating
+   the shared `notebooks_jl` project. A plain command like
+   `julia --project=./notebooks_jl -e 'import Pkg; Pkg.instantiate()'` may try
+   to precompile unrelated packages such as `DWave`, `DWaveNeal`, `PythonPlot`,
+   and `QUBO`, which are not needed for the math programming notebook and can
+   fail depending on the local Conda/pixi state.
+
+6. To verify notebook execution locally, use the repo targets:
 
    ```bash
    make verify-mathprog

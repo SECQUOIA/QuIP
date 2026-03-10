@@ -43,8 +43,7 @@ The built site will be written to `_build/html/index.html`.
    uv sync --group qubo
    ```
 
-   Use `mathprog` for `notebooks_py/1-MathProg_python.ipynb` and `qubo` for
-   `notebooks_py/2-QUBO_python.ipynb`.
+   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/1-MathProg_python.ipynb) and `qubo` for both [notebooks_py/2-QUBO_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/2-QUBO_python.ipynb) and [notebooks_jl/2-QUBO.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/2-QUBO.ipynb), because the Julia QUBO notebook reuses the repo-local Python environment for `dwave-neal`.
 
 5. To prepare the shared Julia notebook environment locally, use the repo
    target instead of a bare `Pkg.instantiate()`:

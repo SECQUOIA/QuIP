@@ -39,11 +39,17 @@ The built site will be written to `_build/html/index.html`.
    dependencies into the same `uv` environment:
 
    ```bash
+   # For only the math programming notebooks:
    uv sync --group mathprog
+
+   # For only the QUBO-related notebooks:
    uv sync --group qubo
+
+   # To make both math programming and QUBO notebooks runnable together:
+   uv sync --group mathprog --group qubo
    ```
 
-   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/1-MathProg_python.ipynb) and `qubo` for [notebooks_py/2-QUBO_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/2-QUBO_python.ipynb) plus the Julia notebooks that rely on the D-Wave Python stack: [notebooks_jl/2-QUBO.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/2-QUBO.ipynb), [notebooks_jl/3-GAMA.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/3-GAMA.ipynb), [notebooks_jl/4-DWave.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/4-DWave.ipynb), and [notebooks_jl/5-Benchmarking.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/5-Benchmarking.ipynb). Those Julia notebooks reuse the repo-local Python environment instead of relying on Julia's `CondaPkg` resolver.
+   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](notebooks_py/1-MathProg_python.ipynb) and `qubo` for [notebooks_py/2-QUBO_python.ipynb](notebooks_py/2-QUBO_python.ipynb) plus the Julia notebooks that rely on the D-Wave Python stack: [notebooks_jl/2-QUBO.ipynb](notebooks_jl/2-QUBO.ipynb), [notebooks_jl/3-GAMA.ipynb](notebooks_jl/3-GAMA.ipynb), [notebooks_jl/4-DWave.ipynb](notebooks_jl/4-DWave.ipynb), and [notebooks_jl/5-Benchmarking.ipynb](notebooks_jl/5-Benchmarking.ipynb). Those Julia notebooks reuse the repo-local Python environment instead of relying on Julia's `CondaPkg` resolver.
 
 5. To prepare the shared Julia notebook environment locally, use the repo
    target instead of a bare `Pkg.instantiate()`:

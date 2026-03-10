@@ -43,7 +43,7 @@ The built site will be written to `_build/html/index.html`.
    uv sync --group qubo
    ```
 
-   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/1-MathProg_python.ipynb) and `qubo` for both [notebooks_py/2-QUBO_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/2-QUBO_python.ipynb) and [notebooks_jl/2-QUBO.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/2-QUBO.ipynb), because the Julia QUBO notebook reuses the repo-local Python environment for `dwave-neal`.
+   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/1-MathProg_python.ipynb) and `qubo` for [notebooks_py/2-QUBO_python.ipynb](/home/bernalde/repos/QuIP/notebooks_py/2-QUBO_python.ipynb) plus the Julia notebooks that rely on the D-Wave Python stack: [notebooks_jl/2-QUBO.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/2-QUBO.ipynb), [notebooks_jl/3-GAMA.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/3-GAMA.ipynb), [notebooks_jl/4-DWave.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/4-DWave.ipynb), and [notebooks_jl/5-Benchmarking.ipynb](/home/bernalde/repos/QuIP/notebooks_jl/5-Benchmarking.ipynb). Those Julia notebooks reuse the repo-local Python environment instead of relying on Julia's `CondaPkg` resolver.
 
 5. To prepare the shared Julia notebook environment locally, use the repo
    target instead of a bare `Pkg.instantiate()`:
@@ -55,8 +55,8 @@ The built site will be written to `_build/html/index.html`.
    This disables Julia's automatic blanket precompile step while instantiating
    the shared `notebooks_jl` project. A plain command like
    `julia --project=./notebooks_jl -e 'import Pkg; Pkg.instantiate()'` may try
-   to precompile unrelated packages such as `DWave`, `DWaveNeal`, `PythonPlot`,
-   and `QUBO`, which are not needed for the math programming notebook and can
+   to precompile unrelated packages such as `DWave`, `PythonPlot`, and `QUBO`,
+   which are not needed for the math programming notebook and can
    fail depending on the local Conda/pixi state.
 
 6. To verify notebook execution locally, use the repo targets:

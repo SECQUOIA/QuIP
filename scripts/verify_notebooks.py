@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,7 @@ DEFAULT_NOTEBOOKS = (
 JULIA_PROJECT = REPO_ROOT / "notebooks_jl"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
+JULIAUP_VERSION = re.compile(r"julia-(\d+)\.(\d+)\.(\d+)")
 
 
 def default_julia_depot_path() -> str:
@@ -40,10 +42,17 @@ def find_julia_executable() -> str:
     resolved = Path(candidate).resolve()
     if resolved.name == "julialauncher":
         juliaup_root = Path.home() / ".julia" / "juliaup"
-        binaries = sorted(juliaup_root.glob("*/bin/julia"))
+        binaries = sorted(juliaup_root.glob("*/bin/julia"), key=juliaup_binary_key)
         if binaries:
             return str(binaries[-1])
     return candidate
+
+
+def juliaup_binary_key(path: Path) -> tuple[int, int, int, str]:
+    match = JULIAUP_VERSION.search(path.as_posix())
+    if match:
+        return tuple(int(part) for part in match.groups()) + (path.as_posix(),)
+    return (0, 0, 0, path.as_posix())
 
 
 def merged_env(overrides: dict[str, str] | None = None) -> dict[str, str]:

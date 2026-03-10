@@ -8,7 +8,7 @@ if [[ "$(basename "$resolved")" == "julialauncher" ]]; then
   juliaup_root="${HOME}/.julia/juliaup"
   if [[ -d "$juliaup_root" ]]; then
     latest_binary="$(
-      find "$juliaup_root" -maxdepth 3 -type f -path '*/bin/julia' | sort | tail -n 1
+      find "$juliaup_root" -maxdepth 3 -type f -path '*/bin/julia' | sort -V | tail -n 1
     )"
     if [[ -n "$latest_binary" ]]; then
       printf '%s\n' "$latest_binary"

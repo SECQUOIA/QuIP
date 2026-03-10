@@ -1,0 +1,25 @@
+[project]
+name = "quip"
+version = "0.1.0"
+description = "Jupyter Book and notebook environments for SECQUOIA QuIP materials."
+requires-python = ">=3.10,<3.13"
+dependencies = []
+
+[dependency-groups]
+docs = [
+    "jupyterlab>=4.4,<5",
+    "jupyter-book==2.1.0",
+]
+mathprog = [
+    "highspy>=1.11,<2",
+    "idaes-pse>=2.9,<3",
+    "matplotlib>=3.8,<4",
+    "numpy>=1.26,<3",
+    "pyomo>=6.9,<7",
+    "pyscipopt>=5.6,<6",
+    "scipy>=1.13,<2",
+]
+
+[tool.uv]
+package = false
+default-groups = ["docs"]

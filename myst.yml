@@ -3,11 +3,11 @@ project:
   title: "QuIP: Quantum Integer Programming Notebooks"
   authors:
     - name: David E. Bernal Neira
-    - name: Pedro Maciel Xavier
   copyright: "2026"
   github: SECQUOIA/QuIP
   toc:
-    - file: README.md
+    - file: index.md
+    - file: local-setup.md
     - title: Mathematical Programming
       children:
         - file: notebooks_py/1-MathProg_python.ipynb

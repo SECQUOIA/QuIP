@@ -35,12 +35,16 @@ The built site will be written to `_build/html/index.html`.
 
 ## Notebook Execution
 
-4. To work on the mathematical programming Python notebook locally, install its
-   Python dependencies into the same `uv` environment:
+4. To work on the Python notebooks locally, install the notebook-specific
+   dependencies into the same `uv` environment:
 
    ```bash
    uv sync --group mathprog
+   uv sync --group qubo
    ```
+
+   Use `mathprog` for `notebooks_py/1-MathProg_python.ipynb` and `qubo` for
+   `notebooks_py/2-QUBO_python.ipynb`.
 
 5. To prepare the shared Julia notebook environment locally, use the repo
    target instead of a bare `Pkg.instantiate()`:
@@ -60,10 +64,13 @@ The built site will be written to `_build/html/index.html`.
 
    ```bash
    make verify-mathprog
+   make verify-qubo-python
    ```
 
-   This executes the Python and Julia math programming notebooks through
-   `jupyter nbconvert` and writes the executed copies to `.nbverify/`.
+   `make verify-mathprog` executes the Python and Julia math programming
+   notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
+   executes the Python QUBO notebook. Both write the executed copies to
+   `.nbverify/`.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already

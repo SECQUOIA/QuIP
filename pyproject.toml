@@ -22,6 +22,7 @@ mathprog = [
 qubo = [
     "dimod>=0.12,<1",
     "dwave-neal>=0.6,<1",
+    "dwave-ocean-sdk>=9,<10",
     "dwavebinarycsp[maxgap,mip]>=0.3,<1",
     "highspy>=1.11,<2",
     "matplotlib>=3.8,<4",

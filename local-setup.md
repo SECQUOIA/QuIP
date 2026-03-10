@@ -83,6 +83,9 @@ The built site will be written to `_build/html/index.html`.
    uv run --group docs jupyter lab
    ```
 
+   The `docs` group includes `jupyterlab`, so the interactive launcher stays
+   inside the same project-local `uv` environment used for the book build.
+
    Then select:
 
    - `Python 3` for notebooks under `notebooks_py/`

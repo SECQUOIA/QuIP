@@ -18,7 +18,6 @@ DEFAULT_NOTEBOOKS = (
     Path("notebooks_py/1-MathProg_python.ipynb"),
     Path("notebooks_jl/1-MathProg.ipynb"),
 )
-JULIA_PROJECT = REPO_ROOT / "notebooks_jl"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
 JULIAUP_VERSION = re.compile(r"julia-(\d+)\.(\d+)\.(\d+)")
@@ -81,13 +80,14 @@ def classify_notebook(path: Path) -> str:
     raise ValueError(f"Unsupported notebook path: {path}")
 
 
-def instantiate_julia_project() -> None:
+def instantiate_julia_project(notebook: Path) -> None:
     run(
         [
             find_julia_executable(),
-            "--project=./notebooks_jl",
+            "--project=./scripts",
             "-e",
-            "import Pkg; Pkg.resolve(); Pkg.instantiate()",
+            'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1])',
+            str(notebook),
         ],
         env={
             "JULIA_DEPOT_PATH": default_julia_depot_path(),
@@ -112,10 +112,7 @@ def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
         ],
         "display_name": "QuIP Julia (local)",
         "language": "julia",
-        "env": {
-            "JULIA_DEPOT_PATH": default_julia_depot_path(),
-            "JULIA_LOAD_PATH": f"{JULIA_PROJECT}:{JULIA_KERNEL_PROJECT}:@stdlib",
-        },
+        "env": {"JULIA_DEPOT_PATH": default_julia_depot_path()},
         "interrupt_mode": "signal",
     }
     (kernels_dir / "kernel.json").write_text(json.dumps(kernel_spec, indent=2) + "\n")
@@ -175,7 +172,6 @@ def main() -> int:
         execute_notebook(notebook, kernel_name="python3")
 
     if julia_notebooks:
-        instantiate_julia_project()
         run(
             [
                 find_julia_executable(),
@@ -191,6 +187,7 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
             kernel_name, env = julia_kernel_spec_dir(Path(tmp))
             for notebook in julia_notebooks:
+                instantiate_julia_project(notebook)
                 execute_notebook(notebook, kernel_name=kernel_name, env=env)
 
     print(f"Executed {len(notebooks)} notebook(s). Outputs written to {output_dir()}")

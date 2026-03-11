@@ -8,16 +8,17 @@ JULIA ?= $(shell ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
 
+NOTEBOOK ?= notebooks_jl/1-MathProg.ipynb
 NOTEBOOKS ?= notebooks_py/1-MathProg_python.ipynb notebooks_jl/1-MathProg.ipynb
 
 setup-julia:
-	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./notebooks_jl -e 'import Pkg; Pkg.resolve(); Pkg.instantiate()'
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1])' "$(NOTEBOOK)"
 
 sysimage:
 	$(JULIA) -e 'using InteractiveUtils; versioninfo()'
-	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./notebooks_jl -e 'import Pkg; Pkg.resolve(); Pkg.instantiate()'
 	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./scripts -e 'import Pkg; Pkg.resolve(); Pkg.instantiate()'
-	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) $(JULIA) --project=./scripts --threads=auto ./scripts/create_sysimage.jl
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1])' "$(NOTEBOOK)"
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) NOTEBOOK=$(NOTEBOOK) $(JULIA) --project=./scripts --threads=auto ./scripts/create_sysimage.jl
 
 verify-notebooks:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(UV_GROUP_FLAGS)

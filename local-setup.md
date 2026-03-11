@@ -51,19 +51,17 @@ The built site will be written to `_build/html/index.html`.
 
    Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](notebooks_py/1-MathProg_python.ipynb) and `qubo` for [notebooks_py/2-QUBO_python.ipynb](notebooks_py/2-QUBO_python.ipynb) plus the Julia notebooks that rely on the D-Wave Python stack: [notebooks_jl/2-QUBO.ipynb](notebooks_jl/2-QUBO.ipynb), [notebooks_jl/3-GAMA.ipynb](notebooks_jl/3-GAMA.ipynb), [notebooks_jl/4-DWave.ipynb](notebooks_jl/4-DWave.ipynb), and [notebooks_jl/5-Benchmarking.ipynb](notebooks_jl/5-Benchmarking.ipynb). Those Julia notebooks reuse the repo-local Python environment instead of relying on Julia's `CondaPkg` resolver.
 
-5. To prepare the shared Julia notebook environment locally, use the repo
-   target instead of a bare `Pkg.instantiate()`:
+5. To prepare a Julia notebook environment locally, instantiate the
+   notebook-specific project instead of a shared `notebooks_jl` project:
 
    ```bash
-   make setup-julia
+   make setup-julia NOTEBOOK=notebooks_jl/1-MathProg.ipynb
+   make setup-julia NOTEBOOK=notebooks_jl/2-QUBO.ipynb
    ```
 
-   This disables Julia's automatic blanket precompile step while instantiating
-   the shared `notebooks_jl` project. A plain command like
-   `julia --project=./notebooks_jl -e 'import Pkg; Pkg.instantiate()'` may try
-   to precompile unrelated packages such as `DWave`, `PythonPlot`, and `QUBO`,
-   which are not needed for the math programming notebook and can
-   fail depending on the local Conda/pixi state.
+   This instantiates only the Julia project that belongs to the selected
+   notebook under `notebooks_jl/envs/<notebook-stem>/`, so the math
+   programming notebook no longer pays the D-Wave/QUBO dependency cost.
 
 6. To verify notebook execution locally, use the repo targets:
 
@@ -87,11 +85,11 @@ The built site will be written to `_build/html/index.html`.
    make verify-notebooks NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb notebooks_jl/2-QUBO.ipynb"
    ```
 
-7. To run the notebooks interactively, install an IJulia kernel for this repo
-   and then launch Jupyter:
+7. To run the notebooks interactively, install a generic QuIP Julia kernel and
+   then launch Jupyter:
 
    ```bash
-   julia --project=./scripts -e 'import Pkg; Pkg.resolve(); Pkg.instantiate(); using IJulia; installkernel("QuIP Julia", "--project=$(abspath("notebooks_jl"))")'
+   julia --project=./scripts -e 'import Pkg; Pkg.resolve(); Pkg.instantiate(); using IJulia; installkernel("QuIP Julia", "--project=$(abspath("scripts"))")'
    uv run --group docs jupyter lab
    ```
 
@@ -101,8 +99,11 @@ The built site will be written to `_build/html/index.html`.
    Then select:
 
    - `Python 3` for notebooks under `notebooks_py/`
-   - `QuIP Julia` or another Julia kernel for notebooks under `notebooks_jl/`
+   - `QuIP Julia 1.12`, `QuIP Julia`, or another Julia kernel for notebooks
+     under `notebooks_jl/`
 
    If you see a Python `SyntaxError` on a line like
    `IN_COLAB = haskey(ENV, ...) || ...`, the Julia notebook is running with the
-   wrong kernel.
+   wrong kernel. The first Julia cell will activate the notebook-specific
+   project under `notebooks_jl/envs/`, so one local Julia kernel is enough for
+   all Julia notebooks.

@@ -112,7 +112,10 @@ def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
         ],
         "display_name": "QuIP Julia (local)",
         "language": "julia",
-        "env": {"JULIA_DEPOT_PATH": default_julia_depot_path()},
+        "env": {
+            "JULIA_DEPOT_PATH": default_julia_depot_path(),
+            "JULIA_PKG_PRECOMPILE_AUTO": "0",
+        },
         "interrupt_mode": "signal",
     }
     (kernels_dir / "kernel.json").write_text(json.dumps(kernel_spec, indent=2) + "\n")

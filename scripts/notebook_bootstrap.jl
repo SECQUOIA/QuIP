@@ -134,7 +134,7 @@ function bootstrap_notebook(
     project_key::AbstractString;
     needs_python::Bool = notebook_requires_python(project_key),
     python_packages::Vector{String} = ["dwave-ocean-sdk"],
-    precompile::Bool = true,
+    precompile::Bool = false,
     chdir_to_notebooks::Bool = true,
 )
     in_colab = detect_colab()

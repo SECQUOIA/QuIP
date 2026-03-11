@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_JULIA_COLAB_HOOK:-0}" == "1" ]]; then
+  exit 0
+fi
+
+changed_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if [[ -z "$changed_files" ]]; then
+  exit 0
+fi
+
+if ! printf '%s\n' "$changed_files" | grep -Eq '^(notebooks_jl/.*\.ipynb|notebooks_jl/envs/|scripts/notebook_bootstrap\.jl|scripts/verify_notebooks\.py|scripts/verify_julia_env_smokes\.jl|scripts/find_julia\.sh|Makefile|local-setup\.md)$'; then
+  exit 0
+fi
+
+echo "Running Julia Colab compatibility check (make verify-julia-colab)"
+make verify-julia-colab

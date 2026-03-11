@@ -85,11 +85,42 @@ The built site will be written to `_build/html/index.html`.
    make verify-notebooks NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb notebooks_jl/2-QUBO.ipynb"
    ```
 
+   To approximate Google Colab's Julia runtime locally, first install Julia
+   1.11 once with `juliaup add 1.11`, then run the Colab-style Julia check:
+
+   ```bash
+   make verify-julia-colab
+   ```
+
+   This target uses Julia `1.11`, writes Julia state into
+   `.julia-colab-depot/1.11`, reuses registries and cached packages from
+   `~/.julia` when available, executes the Julia math programming and QUBO
+   notebooks end to end, and runs import/bootstrap smokes for the remaining
+   Julia notebooks. It is the recommended local check before changing the
+   Julia notebook bootstrap or notebook-specific Julia environments.
+
+   To force a colder check that does not fall back to `~/.julia`, override the
+   depot path explicitly:
+
+   ```bash
+   make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot/1.11"
+   ```
+
+   To install an optional git hook that runs this check when staged changes
+   touch the Julia notebooks or their shared tooling, run:
+
+   ```bash
+   make install-julia-colab-hook
+   ```
+
+   The hook is a local `pre-commit` hook under `.githooks/pre-commit`. Set
+   `SKIP_JULIA_COLAB_HOOK=1` for a one-off bypass.
+
 7. To run the notebooks interactively, install a generic QuIP Julia kernel and
    then launch Jupyter:
 
    ```bash
-   julia --project=./scripts -e 'import Pkg; Pkg.resolve(); Pkg.instantiate(); using IJulia; installkernel("QuIP Julia", "--project=$(abspath("scripts"))")'
+   julia --project=./scripts -e 'import Pkg; Pkg.instantiate(); using IJulia; installkernel("QuIP Julia", "--project=$(abspath("scripts"))")'
    uv run --group docs jupyter lab
    ```
 

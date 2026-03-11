@@ -177,7 +177,7 @@ def main() -> int:
                 find_julia_executable(),
                 "--project=./scripts",
                 "-e",
-                "import Pkg; Pkg.resolve(); Pkg.instantiate()",
+                "import Pkg; Pkg.instantiate()",
             ],
             env={
                 "JULIA_DEPOT_PATH": default_julia_depot_path(),

@@ -35,12 +35,21 @@ The built site will be written to `_build/html/index.html`.
 
 ## Notebook Execution
 
-4. To work on the mathematical programming Python notebook locally, install its
-   Python dependencies into the same `uv` environment:
+4. To work on the Python notebooks locally, install the notebook-specific
+   dependencies into the same `uv` environment:
 
    ```bash
+   # For only the math programming notebooks:
    uv sync --group mathprog
+
+   # For only the QUBO-related notebooks:
+   uv sync --group qubo
+
+   # To make both math programming and QUBO notebooks runnable together:
+   uv sync --group mathprog --group qubo
    ```
+
+   Use `mathprog` for [notebooks_py/1-MathProg_python.ipynb](notebooks_py/1-MathProg_python.ipynb) and `qubo` for [notebooks_py/2-QUBO_python.ipynb](notebooks_py/2-QUBO_python.ipynb) plus the Julia notebooks that rely on the D-Wave Python stack: [notebooks_jl/2-QUBO.ipynb](notebooks_jl/2-QUBO.ipynb), [notebooks_jl/3-GAMA.ipynb](notebooks_jl/3-GAMA.ipynb), [notebooks_jl/4-DWave.ipynb](notebooks_jl/4-DWave.ipynb), and [notebooks_jl/5-Benchmarking.ipynb](notebooks_jl/5-Benchmarking.ipynb). Those Julia notebooks reuse the repo-local Python environment instead of relying on Julia's `CondaPkg` resolver.
 
 5. To prepare the shared Julia notebook environment locally, use the repo
    target instead of a bare `Pkg.instantiate()`:
@@ -52,18 +61,21 @@ The built site will be written to `_build/html/index.html`.
    This disables Julia's automatic blanket precompile step while instantiating
    the shared `notebooks_jl` project. A plain command like
    `julia --project=./notebooks_jl -e 'import Pkg; Pkg.instantiate()'` may try
-   to precompile unrelated packages such as `DWave`, `DWaveNeal`, `PythonPlot`,
-   and `QUBO`, which are not needed for the math programming notebook and can
+   to precompile unrelated packages such as `DWave`, `PythonPlot`, and `QUBO`,
+   which are not needed for the math programming notebook and can
    fail depending on the local Conda/pixi state.
 
 6. To verify notebook execution locally, use the repo targets:
 
    ```bash
    make verify-mathprog
+   make verify-qubo-python
    ```
 
-   This executes the Python and Julia math programming notebooks through
-   `jupyter nbconvert` and writes the executed copies to `.nbverify/`.
+   `make verify-mathprog` executes the Python and Julia math programming
+   notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
+   executes the Python QUBO notebook. Both write the executed copies to
+   `.nbverify/`.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already

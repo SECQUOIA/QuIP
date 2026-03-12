@@ -11,26 +11,37 @@ project:
     - title: Mathematical Programming
       children:
         - file: notebooks_py/1-MathProg_python.ipynb
+          title: Mathematical Programming (Python)
         - file: notebooks_jl/1-MathProg.ipynb
+          title: Mathematical Programming (Julia)
     - title: QUBO
       children:
         - file: notebooks_py/2-QUBO_python.ipynb
+          title: QUBO and Ising Models (Python)
         - file: notebooks_jl/2-QUBO.ipynb
+          title: QUBO and Ising Models (Julia)
     - title: GAMA
       children:
         - file: notebooks_py/3-GAMA_python.ipynb
+          title: Graver Augmentation Multiseed Algorithm (Python)
         - file: notebooks_jl/3-GAMA.ipynb
+          title: Graver Augmentation Multiseed Algorithm (Julia)
     - title: D-Wave
       children:
         - file: notebooks_py/4-DWAVE_python.ipynb
+          title: Quantum Annealing via D-Wave (Python)
         - file: notebooks_jl/4-DWave.ipynb
+          title: Quantum Annealing via D-Wave (Julia)
     - title: Benchmarking
       children:
         - file: notebooks_py/5-Benchmarking_python.ipynb
+          title: Benchmarking (Python)
         - file: notebooks_jl/5-Benchmarking.ipynb
+          title: Benchmarking (Julia)
     - title: QCi
       children:
         - file: notebooks_py/6-QCi_python.ipynb
+          title: Entropy Computing via QCi (Python)
 site:
   template: book-theme
   options:

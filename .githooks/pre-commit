@@ -11,7 +11,7 @@ if [[ -z "$changed_files" ]]; then
   exit 0
 fi
 
-if ! printf '%s\n' "$changed_files" | grep -Eq '^(notebooks_jl/.*\.ipynb|notebooks_jl/envs/|scripts/notebook_bootstrap\.jl|scripts/verify_notebooks\.py|scripts/verify_julia_env_smokes\.jl|scripts/find_julia\.sh|Makefile|local-setup\.md)$'; then
+if ! printf '%s\n' "$changed_files" | grep -Eq '^(notebooks_jl/.*\.ipynb|notebooks_jl/envs/.*|scripts/notebook_bootstrap\.jl|scripts/verify_notebooks\.py|scripts/verify_julia_env_smokes\.jl|scripts/find_julia\.sh|Makefile|local-setup\.md)$'; then
   exit 0
 fi
 

@@ -74,6 +74,9 @@ The built site will be written to `_build/html/index.html`.
    notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
    executes the Python QUBO notebook. Both write the executed copies to
    `.nbverify/`.
+   The Julia notebook checks default to Julia `1.11` so they match the
+   notebook manifests; install it once with `juliaup add 1.11`, or override
+   `JULIA=/path/to/julia` if you need a different binary.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already

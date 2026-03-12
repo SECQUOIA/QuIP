@@ -35,7 +35,23 @@ function detect_colab()
         isdir(joinpath("/content", "sample_data"))
 end
 
-default_bootstrap_warm_packages(; in_colab::Bool = detect_colab()) = in_colab
+function env_bool(name::AbstractString)
+    value = get(ENV, name, nothing)
+    value === nothing && return nothing
+
+    normalized = lowercase(strip(value))
+    if normalized in ("1", "true", "yes", "on")
+        return true
+    elseif normalized in ("0", "false", "no", "off")
+        return false
+    end
+
+    error("Expected `$name` to be one of 1/0/true/false/yes/no/on/off, got `$value`.")
+end
+
+default_bootstrap_warm_packages(; in_colab::Bool = detect_colab()) =
+    something(env_bool("QUIP_NOTEBOOK_WARM_PACKAGES"), in_colab)
+
 default_bootstrap_precompile(;
     in_colab::Bool = detect_colab(),
     warm_packages::Bool = default_bootstrap_warm_packages(in_colab = in_colab),

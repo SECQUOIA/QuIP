@@ -81,6 +81,7 @@ target/
 .nbverify/
 .uv-cache/
 .julia-depot/
+.julia-colab-depot/
 
 # IPython
 profile_default/

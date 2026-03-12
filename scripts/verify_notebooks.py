@@ -5,8 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,10 +16,10 @@ DEFAULT_NOTEBOOKS = (
     Path("notebooks_py/1-MathProg_python.ipynb"),
     Path("notebooks_jl/1-MathProg.ipynb"),
 )
-JULIA_PROJECT = REPO_ROOT / "notebooks_jl"
+DEFAULT_JULIA_VERSION = "1.11"
+FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
-JULIAUP_VERSION = re.compile(r"julia-(\d+)\.(\d+)\.(\d+)")
 
 
 def default_julia_depot_path() -> str:
@@ -36,23 +34,24 @@ def find_julia_executable() -> str:
     configured = os.environ.get("JULIA_BIN")
     if configured:
         return configured
-    candidate = shutil.which("julia")
-    if candidate is None:
-        raise RuntimeError("Could not find `julia` on PATH.")
-    resolved = Path(candidate).resolve()
-    if resolved.name == "julialauncher":
-        juliaup_root = Path.home() / ".julia" / "juliaup"
-        binaries = sorted(juliaup_root.glob("*/bin/julia"), key=juliaup_binary_key)
-        if binaries:
-            return str(binaries[-1])
-    return candidate
 
+    env = os.environ.copy()
+    env.setdefault("JULIA_VERSION", DEFAULT_JULIA_VERSION)
 
-def juliaup_binary_key(path: Path) -> tuple[int, int, int, str]:
-    match = JULIAUP_VERSION.search(path.as_posix())
-    if match:
-        return tuple(int(part) for part in match.groups()) + (path.as_posix(),)
-    return (0, 0, 0, path.as_posix())
+    try:
+        result = subprocess.run(
+            [str(FIND_JULIA_SCRIPT)],
+            cwd=REPO_ROOT,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip() or "Could not resolve a Julia executable."
+        raise RuntimeError(message) from exc
+
+    return result.stdout.strip()
 
 
 def merged_env(overrides: dict[str, str] | None = None) -> dict[str, str]:
@@ -81,13 +80,14 @@ def classify_notebook(path: Path) -> str:
     raise ValueError(f"Unsupported notebook path: {path}")
 
 
-def instantiate_julia_project() -> None:
+def instantiate_julia_project(notebook: Path) -> None:
     run(
         [
             find_julia_executable(),
-            "--project=./notebooks_jl",
+            "--project=./scripts",
             "-e",
-            "import Pkg; Pkg.resolve(); Pkg.instantiate()",
+            'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1]; precompile=true)',
+            str(notebook),
         ],
         env={
             "JULIA_DEPOT_PATH": default_julia_depot_path(),
@@ -114,7 +114,8 @@ def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
         "language": "julia",
         "env": {
             "JULIA_DEPOT_PATH": default_julia_depot_path(),
-            "JULIA_LOAD_PATH": f"{JULIA_PROJECT}:{JULIA_KERNEL_PROJECT}:@stdlib",
+            "JULIA_PKG_PRECOMPILE_AUTO": "0",
+            "QUIP_NOTEBOOK_WARM_PACKAGES": "1",
         },
         "interrupt_mode": "signal",
     }
@@ -175,13 +176,12 @@ def main() -> int:
         execute_notebook(notebook, kernel_name="python3")
 
     if julia_notebooks:
-        instantiate_julia_project()
         run(
             [
                 find_julia_executable(),
                 "--project=./scripts",
                 "-e",
-                "import Pkg; Pkg.resolve(); Pkg.instantiate()",
+                "import Pkg; Pkg.instantiate()",
             ],
             env={
                 "JULIA_DEPOT_PATH": default_julia_depot_path(),
@@ -191,6 +191,7 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
             kernel_name, env = julia_kernel_spec_dir(Path(tmp))
             for notebook in julia_notebooks:
+                instantiate_julia_project(notebook)
                 execute_notebook(notebook, kernel_name=kernel_name, env=env)
 
     print(f"Executed {len(notebooks)} notebook(s). Outputs written to {output_dir()}")

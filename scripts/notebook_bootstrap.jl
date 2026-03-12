@@ -30,11 +30,16 @@ function log_step(message::AbstractString)
 end
 
 function detect_colab()
-    return haskey(ENV, "COLAB_RELEASE_TAG") || haskey(ENV, "COLAB_JUPYTER_IP")
+    return haskey(ENV, "COLAB_RELEASE_TAG") ||
+        haskey(ENV, "COLAB_JUPYTER_IP") ||
+        isdir(joinpath("/content", "sample_data"))
 end
 
-default_bootstrap_precompile(; in_colab::Bool = detect_colab()) = in_colab
 default_bootstrap_warm_packages(; in_colab::Bool = detect_colab()) = in_colab
+default_bootstrap_precompile(;
+    in_colab::Bool = detect_colab(),
+    warm_packages::Bool = default_bootstrap_warm_packages(in_colab = in_colab),
+) = in_colab && !warm_packages
 
 function notebook_key(target::AbstractString)
     return splitext(basename(target))[1]
@@ -165,8 +170,8 @@ function bootstrap_notebook(
     project_key::AbstractString;
     needs_python::Bool = notebook_requires_python(project_key),
     python_packages::Vector{String} = ["dwave-ocean-sdk"],
-    precompile::Bool = default_bootstrap_precompile(),
     warm_packages::Bool = default_bootstrap_warm_packages(),
+    precompile::Bool = default_bootstrap_precompile(in_colab = detect_colab(), warm_packages = warm_packages),
     suppress_warmup_logs::Bool = warm_packages,
     chdir_to_notebooks::Bool = true,
 )

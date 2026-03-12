@@ -25,6 +25,8 @@ function detect_colab()
     return haskey(ENV, "COLAB_RELEASE_TAG") || haskey(ENV, "COLAB_JUPYTER_IP")
 end
 
+default_bootstrap_precompile(; in_colab::Bool = detect_colab()) = in_colab
+
 function notebook_key(target::AbstractString)
     return splitext(basename(target))[1]
 end
@@ -134,7 +136,7 @@ function bootstrap_notebook(
     project_key::AbstractString;
     needs_python::Bool = notebook_requires_python(project_key),
     python_packages::Vector{String} = ["dwave-ocean-sdk"],
-    precompile::Bool = false,
+    precompile::Bool = default_bootstrap_precompile(),
     chdir_to_notebooks::Bool = true,
 )
     in_colab = detect_colab()

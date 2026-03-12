@@ -7,6 +7,10 @@ find_juliaup_binary() {
   local matches
 
   if [[ ! -d "$juliaup_root" ]]; then
+    if [[ -n "$requested_version" ]]; then
+      printf 'Could not find a Julia %s binary under %s. Install it with `juliaup add %s` or set JULIA_BIN explicitly.\n' \
+        "$requested_version" "$juliaup_root" "$requested_version" >&2
+    fi
     return 1
   fi
 
@@ -47,7 +51,13 @@ if [[ -n "${JULIA_VERSION:-}" ]]; then
   exit 0
 fi
 
-candidate="$(command -v julia)"
+if command -v julia >/dev/null 2>&1; then
+  candidate="$(command -v julia)"
+else
+  printf 'Could not find a `julia` executable on your PATH. Install Julia or set JULIA_BIN or JULIA_VERSION.\n' >&2
+  exit 1
+fi
+
 resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s\n' "$candidate")"
 
 if [[ "$(basename "$resolved")" == "julialauncher" ]]; then

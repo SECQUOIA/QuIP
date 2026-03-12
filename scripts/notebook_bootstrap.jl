@@ -1,6 +1,7 @@
 module QuIPNotebookBootstrap
 
 using Dates
+using Logging
 import Pkg
 
 const WORKSPACE = normpath(joinpath(@__DIR__, ".."))
@@ -12,6 +13,13 @@ const PYTHON_STACK_NOTEBOOKS = Set((
     "4-DWave",
     "5-Benchmarking",
 ))
+const NOTEBOOK_IMPORTS = Dict(
+    "1-MathProg" => :(using Plots, JuMP, GLPK, HiGHS, Ipopt, SpecialFunctions, AmplNLWriter, Bonmin_jll, Couenne_jll, SCIP),
+    "2-QUBO" => :(using Karnak, LinearAlgebra, Graphs, JuMP, QUBO, Plots, HiGHS, DWave, Luxor, QUBOTools, ToQUBO),
+    "3-GAMA" => :(using BinaryWrappers, DelimitedFiles, NPZ, JuMP, DWave, LinearAlgebra, Measures, Random, Plots, StatsBase, StatsPlots, lib4ti2_jll),
+    "4-DWave" => :(using LinearAlgebra, Plots, JuMP, QUBO, DWave, Graphs, QUBOTools),
+    "5-Benchmarking" => :(using JuMP, QUBO, LinearAlgebra, Plots, DWave, Random, Statistics, QUBOTools),
+)
 
 timestamp() = Dates.format(now(), "HH:MM:SS")
 
@@ -26,6 +34,7 @@ function detect_colab()
 end
 
 default_bootstrap_precompile(; in_colab::Bool = detect_colab()) = in_colab
+default_bootstrap_warm_packages(; in_colab::Bool = detect_colab()) = in_colab
 
 function notebook_key(target::AbstractString)
     return splitext(basename(target))[1]
@@ -34,6 +43,8 @@ end
 function notebook_requires_python(project_key::AbstractString)
     return project_key in PYTHON_STACK_NOTEBOOKS
 end
+
+notebook_import_expr(project_key::AbstractString) = get(NOTEBOOK_IMPORTS, project_key, nothing)
 
 function notebook_project_dir(project_key::AbstractString; repo_dir::AbstractString = WORKSPACE)
     return joinpath(repo_dir, NOTEBOOKS_DIRNAME, NOTEBOOK_ENVS_DIRNAME, project_key)
@@ -132,11 +143,31 @@ function instantiate_project!(project_dir::AbstractString; precompile::Bool = tr
     return nothing
 end
 
+function warm_notebook_packages!(
+    project_key::AbstractString;
+    suppress_logs::Bool = true,
+)
+    import_expr = notebook_import_expr(project_key)
+    import_expr === nothing && return false
+
+    log_step("Loading notebook packages")
+    if suppress_logs
+        with_logger(NullLogger()) do
+            Core.eval(Main, import_expr)
+        end
+    else
+        Core.eval(Main, import_expr)
+    end
+    return true
+end
+
 function bootstrap_notebook(
     project_key::AbstractString;
     needs_python::Bool = notebook_requires_python(project_key),
     python_packages::Vector{String} = ["dwave-ocean-sdk"],
     precompile::Bool = default_bootstrap_precompile(),
+    warm_packages::Bool = default_bootstrap_warm_packages(),
+    suppress_warmup_logs::Bool = warm_packages,
     chdir_to_notebooks::Bool = true,
 )
     in_colab = detect_colab()
@@ -156,6 +187,9 @@ function bootstrap_notebook(
     end
 
     instantiate_project!(project_dir; precompile = precompile)
+    if warm_packages
+        warm_notebook_packages!(project_key; suppress_logs = suppress_warmup_logs)
+    end
 
     if chdir_to_notebooks
         cd(notebooks_dir)

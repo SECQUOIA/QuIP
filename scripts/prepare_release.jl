@@ -1,9 +1,15 @@
 import Pkg
 import Tar
+include(joinpath(@__DIR__, "notebook_bootstrap.jl"))
+using .QuIPNotebookBootstrap
 
 const WORKSPACE = abspath(joinpath(@__DIR__, ".."))
 const DIST_PATH = abspath(joinpath(WORKSPACE, "dist"))
-const NOTEBOOKS_DIR = joinpath(WORKSPACE, "notebooks_jl")
+const NOTEBOOK = get(ENV, "NOTEBOOK", nothing)
+const PROJECT_DIR = QuIPNotebookBootstrap.resolved_sysimage_project_dir(
+    NOTEBOOK;
+    repo_dir = WORKSPACE,
+)
 
 function get_last_tag()
     file_path = joinpath(WORKSPACE, "last.tag")
@@ -41,14 +47,14 @@ end
 
 function copy_project()
     cp(
-        joinpath(NOTEBOOKS_DIR, "Project.toml"),
+        joinpath(PROJECT_DIR, "Project.toml"),
         joinpath(WORKSPACE, "sysimage", "Project.toml");
         force = true,
     )
 end
 
 function copy_manifest()
-    manifest_path = joinpath(NOTEBOOKS_DIR, "Manifest.toml")
+    manifest_path = joinpath(PROJECT_DIR, "Manifest.toml")
     output_path = joinpath(WORKSPACE, "sysimage", "Manifest.toml")
 
     if isfile(manifest_path)

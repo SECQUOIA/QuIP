@@ -74,9 +74,10 @@ The built site will be written to `_build/html/index.html`.
    notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
    executes the Python QUBO notebook. Both write the executed copies to
    `.nbverify/`.
-   The Julia notebook checks default to Julia `1.11` so they match the
-   notebook manifests; install it once with `juliaup add 1.11`, or override
-   `JULIA=/path/to/julia` if you need a different binary.
+   The Julia notebook checks default to Julia `1.11.5` so they match the
+   notebook manifests and the current Colab runtime; install it once with
+   `juliaup add 1.11.5`, or override `JULIA=/path/to/julia` if you need a
+   different compatible binary.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already
@@ -89,14 +90,15 @@ The built site will be written to `_build/html/index.html`.
    ```
 
    To approximate Google Colab's Julia runtime locally, first install Julia
-   1.11 once with `juliaup add 1.11`, then run the Colab-style Julia check:
+   `1.11.5` once with `juliaup add 1.11.5`, then run the Colab-style Julia
+   check:
 
    ```bash
    make verify-julia-colab
    ```
 
-   This target uses Julia `1.11`, writes Julia state into
-   `.julia-colab-depot/1.11`, reuses registries and cached packages from
+   This target uses Julia `1.11.5`, writes Julia state into
+   `.julia-colab-depot/1.11.5`, reuses registries and cached packages from
    `~/.julia` when available, executes the Julia math programming and QUBO
    notebooks end to end, and runs import/bootstrap smokes for the remaining
    Julia notebooks. It is the recommended local check before changing the
@@ -106,8 +108,17 @@ The built site will be written to `_build/html/index.html`.
    depot path explicitly:
 
    ```bash
-   make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot/1.11"
+   make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot/1.11.5"
    ```
+
+   The Colab bootstrap now validates the running Julia patch version against the
+   checked-in manifest before instantiating packages. If you intentionally want
+   to allow a mismatch and accept a slower `Pkg` re-resolve, set
+   `QUIP_ALLOW_JULIA_VERSION_MISMATCH=1` before launching the notebook.
+
+   If you need the Colab bootstrap to clone a non-default QuIP ref, set
+   `QUIP_REPO_REF=<branch-or-commit>` before running the first Julia notebook
+   cell.
 
    To install an optional git hook that runs this check when staged changes
    touch the Julia notebooks or their shared tooling, run:

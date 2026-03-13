@@ -16,7 +16,7 @@ DEFAULT_NOTEBOOKS = (
     Path("notebooks_py/1-MathProg_python.ipynb"),
     Path("notebooks_jl/1-MathProg.ipynb"),
 )
-DEFAULT_JULIA_VERSION = "1.11"
+DEFAULT_JULIA_VERSION = "1.11.5"
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"

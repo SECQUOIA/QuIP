@@ -4,9 +4,9 @@ include(joinpath(@__DIR__, "notebook_bootstrap.jl"))
 using .QuIPNotebookBootstrap
 using PackageCompiler, Libdl, TOML
 
-const NOTEBOOK = get(ENV, "NOTEBOOK", joinpath("notebooks_jl", "1-MathProg.ipynb"))
-const PROJECT_DIR = QuIPNotebookBootstrap.notebook_project_dir(
-    QuIPNotebookBootstrap.notebook_key(NOTEBOOK);
+const NOTEBOOK = get(ENV, "NOTEBOOK", nothing)
+const PROJECT_DIR = QuIPNotebookBootstrap.resolved_sysimage_project_dir(
+    NOTEBOOK;
     repo_dir = normpath(joinpath(@__DIR__, "..")),
 )
 const SYSIMAGE_PATH = joinpath(@__DIR__, "..", "sysimage", "sysimage.$(Libdl.dlext)")

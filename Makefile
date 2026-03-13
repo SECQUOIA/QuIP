@@ -9,13 +9,18 @@ JULIA ?= $(shell JULIA_VERSION=$(JULIA_VERSION) ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
 COLAB_JULIA_VERSION ?= $(JULIA_VERSION)
+ifneq ($(filter command line environment override,$(origin JULIA)),)
+COLAB_JULIA ?= $(JULIA)
+else
 COLAB_JULIA ?= $(shell JULIA_VERSION=$(COLAB_JULIA_VERSION) ./scripts/find_julia.sh)
+endif
 COLAB_JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-colab-depot/$(COLAB_JULIA_VERSION):$(JULIA_HOME_DEPOT)
 COLAB_UV_GROUP_FLAGS ?= --group docs --group mathprog --group qubo
 COLAB_JULIA_NOTEBOOKS ?= notebooks_jl/1-MathProg.ipynb notebooks_jl/2-QUBO.ipynb
 COLAB_JULIA_SMOKE_NOTEBOOKS ?= 3-GAMA 4-DWave 5-Benchmarking
 
 NOTEBOOK ?= notebooks_jl/1-MathProg.ipynb
+SYSIMAGE_NOTEBOOK ?=
 NOTEBOOKS ?= notebooks_py/1-MathProg_python.ipynb notebooks_jl/1-MathProg.ipynb
 
 setup-julia:
@@ -24,8 +29,8 @@ setup-julia:
 sysimage:
 	$(JULIA) -e 'using InteractiveUtils; versioninfo()'
 	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./scripts -e 'import Pkg; Pkg.instantiate()'
-	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(JULIA) --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1])' "$(NOTEBOOK)"
-	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) NOTEBOOK=$(NOTEBOOK) $(JULIA) --project=./scripts --threads=auto ./scripts/create_sysimage.jl
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) SYSIMAGE_NOTEBOOK="$(SYSIMAGE_NOTEBOOK)" $(JULIA) --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_sysimage_project(get(ENV, "SYSIMAGE_NOTEBOOK", nothing))'
+	JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) NOTEBOOK="$(SYSIMAGE_NOTEBOOK)" $(JULIA) --project=./scripts --threads=auto ./scripts/create_sysimage.jl
 
 verify-notebooks:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(UV_GROUP_FLAGS)

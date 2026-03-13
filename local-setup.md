@@ -77,7 +77,7 @@ The built site will be written to `_build/html/index.html`.
    The Julia notebook checks default to Julia `1.11.5` so they match the
    notebook manifests and the current Colab runtime; install it once with
    `juliaup add 1.11.5`, or override `JULIA=/path/to/julia` if you need a
-   different compatible binary.
+   different compatible local binary.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already
@@ -97,7 +97,12 @@ The built site will be written to `_build/html/index.html`.
    make verify-julia-colab
    ```
 
-   This target uses Julia `1.11.5`, writes Julia state into
+   This target uses `COLAB_JULIA` by default. If you set
+   `JULIA=/path/to/julia` to a compatible binary on the command line, the
+   Colab-style target will now reuse that binary unless you override
+   `COLAB_JULIA` explicitly. You can also pick a specific juliaup toolchain
+   with `COLAB_JULIA_VERSION=1.11.5`.
+   This target writes Julia state into
    `.julia-colab-depot/1.11.5`, reuses registries and cached packages from
    `~/.julia` when available, executes the Julia math programming and QUBO
    notebooks end to end, and runs import/bootstrap smokes for the remaining
@@ -117,8 +122,13 @@ The built site will be written to `_build/html/index.html`.
    `QUIP_ALLOW_JULIA_VERSION_MISMATCH=1` before launching the notebook.
 
    If you need the Colab bootstrap to clone a non-default QuIP ref, set
-   `QUIP_REPO_REF=<branch-or-commit>` before running the first Julia notebook
-   cell.
+   `QUIP_REPO_REF=<branch-tag-or-40-char-commit>` before running the first
+   Julia notebook cell.
+
+   The default `make sysimage` build now uses the shared
+   `notebooks_jl/envs/sysimage` project so the release artifact covers the full
+   notebook stack. To build a notebook-specific sysimage instead, pass
+   `SYSIMAGE_NOTEBOOK=notebooks_jl/2-QUBO.ipynb`.
 
    To install an optional git hook that runs this check when staged changes
    touch the Julia notebooks or their shared tooling, run:

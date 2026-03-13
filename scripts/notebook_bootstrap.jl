@@ -7,6 +7,7 @@ import Pkg
 const WORKSPACE = normpath(joinpath(@__DIR__, ".."))
 const NOTEBOOKS_DIRNAME = "notebooks_jl"
 const NOTEBOOK_ENVS_DIRNAME = "envs"
+const SYSIMAGE_ENV_NAME = "sysimage"
 const PYTHON_STACK_NOTEBOOKS = Set((
     "2-QUBO",
     "3-GAMA",
@@ -69,6 +70,21 @@ notebook_import_expr(project_key::AbstractString) = get(NOTEBOOK_IMPORTS, projec
 
 function notebook_project_dir(project_key::AbstractString; repo_dir::AbstractString = WORKSPACE)
     return joinpath(repo_dir, NOTEBOOKS_DIRNAME, NOTEBOOK_ENVS_DIRNAME, project_key)
+end
+
+function sysimage_project_dir(; repo_dir::AbstractString = WORKSPACE)
+    return notebook_project_dir(SYSIMAGE_ENV_NAME; repo_dir = repo_dir)
+end
+
+function resolved_sysimage_project_dir(
+    target::Union{Nothing, AbstractString} = nothing;
+    repo_dir::AbstractString = WORKSPACE,
+)
+    if isnothing(target) || isempty(strip(target))
+        return sysimage_project_dir(repo_dir = repo_dir)
+    end
+
+    return notebook_project_dir(notebook_key(target); repo_dir = repo_dir)
 end
 
 function candidate_repo_dirs(; cwd::AbstractString = pwd())
@@ -237,6 +253,21 @@ function instantiate_notebook_project(
 
     if needs_python
         configure_python_runtime!(repo_dir; in_colab = false, python_packages = String[])
+    end
+
+    instantiate_project!(project_dir; precompile = precompile)
+    return project_dir
+end
+
+function instantiate_sysimage_project(
+    target::Union{Nothing, AbstractString} = nothing;
+    precompile::Bool = false,
+)
+    repo_dir = ensure_repo_root(in_colab = false)
+    project_dir = resolved_sysimage_project_dir(target; repo_dir = repo_dir)
+
+    if !isdir(project_dir)
+        error("Sysimage project was not found at $project_dir.")
     end
 
     instantiate_project!(project_dir; precompile = precompile)

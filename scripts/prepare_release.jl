@@ -5,9 +5,9 @@ using .QuIPNotebookBootstrap
 
 const WORKSPACE = abspath(joinpath(@__DIR__, ".."))
 const DIST_PATH = abspath(joinpath(WORKSPACE, "dist"))
-const NOTEBOOK = get(ENV, "NOTEBOOK", joinpath("notebooks_jl", "1-MathProg.ipynb"))
-const PROJECT_DIR = QuIPNotebookBootstrap.notebook_project_dir(
-    QuIPNotebookBootstrap.notebook_key(NOTEBOOK);
+const NOTEBOOK = get(ENV, "NOTEBOOK", nothing)
+const PROJECT_DIR = QuIPNotebookBootstrap.resolved_sysimage_project_dir(
+    NOTEBOOK;
     repo_dir = WORKSPACE,
 )
 

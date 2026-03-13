@@ -3,11 +3,14 @@ module QuIPNotebookBootstrap
 using Dates
 using Logging
 import Pkg
+import TOML
 
 const WORKSPACE = normpath(joinpath(@__DIR__, ".."))
 const NOTEBOOKS_DIRNAME = "notebooks_jl"
 const NOTEBOOK_ENVS_DIRNAME = "envs"
 const SYSIMAGE_ENV_NAME = "sysimage"
+const ALLOW_VERSION_MISMATCH_ENV = "QUIP_ALLOW_JULIA_VERSION_MISMATCH"
+const REPO_REF_ENV = "QUIP_REPO_REF"
 const PYTHON_STACK_NOTEBOOKS = Set((
     "2-QUBO",
     "3-GAMA",
@@ -72,6 +75,21 @@ function notebook_project_dir(project_key::AbstractString; repo_dir::AbstractStr
     return joinpath(repo_dir, NOTEBOOKS_DIRNAME, NOTEBOOK_ENVS_DIRNAME, project_key)
 end
 
+function manifest_path(project_dir::AbstractString)
+    return joinpath(project_dir, "Manifest.toml")
+end
+
+function manifest_julia_version(project_dir::AbstractString)
+    path = manifest_path(project_dir)
+    if !isfile(path)
+        return nothing
+    end
+
+    manifest = TOML.parsefile(path)
+    version_string = get(manifest, "julia_version", nothing)
+    return version_string === nothing ? nothing : VersionNumber(version_string)
+end
+
 function sysimage_project_dir(; repo_dir::AbstractString = WORKSPACE)
     return notebook_project_dir(SYSIMAGE_ENV_NAME; repo_dir = repo_dir)
 end
@@ -85,6 +103,94 @@ function resolved_sysimage_project_dir(
     end
 
     return notebook_project_dir(notebook_key(target); repo_dir = repo_dir)
+end
+
+function requested_repo_ref()
+    value = strip(get(ENV, REPO_REF_ENV, ""))
+    return isempty(value) ? nothing : value
+end
+
+is_full_commit_sha(repo_ref::AbstractString) = occursin(r"^[0-9a-fA-F]{40}$", strip(repo_ref))
+
+function repo_remote_url(repo_dir::AbstractString)
+    return strip(readchomp(`git -C $repo_dir remote get-url origin`))
+end
+
+function resolve_repo_ref(repo_dir::AbstractString, repo_ref::AbstractString)
+    remote_url = repo_remote_url(repo_dir)
+    normalized_ref = strip(repo_ref)
+
+    if is_full_commit_sha(normalized_ref)
+        return (
+            remote_url = remote_url,
+            requested_sha = lowercase(normalized_ref),
+            fetch_ref = normalized_ref,
+            is_direct_sha = true,
+        )
+    end
+
+    requested_ref = readchomp(`git ls-remote $remote_url $normalized_ref`)
+    requested_sha = isempty(requested_ref) ? nothing : first(split(requested_ref))
+    if requested_sha === nothing
+        error("Could not resolve `$repo_ref` against `$remote_url`.")
+    end
+
+    return (
+        remote_url = remote_url,
+        requested_sha = lowercase(requested_sha),
+        fetch_ref = normalized_ref,
+        is_direct_sha = false,
+    )
+end
+
+function checkout_repo_ref!(repo_dir::AbstractString, repo_ref::AbstractString)
+    current_ref = lowercase(readchomp(`git -C $repo_dir rev-parse HEAD`))
+    resolved = resolve_repo_ref(repo_dir, repo_ref)
+
+    if current_ref == resolved.requested_sha
+        return nothing
+    end
+
+    known_commit_cmd = Cmd([
+        "git",
+        "-C",
+        repo_dir,
+        "cat-file",
+        "-e",
+        "$(resolved.requested_sha)^{commit}",
+    ])
+    if resolved.is_direct_sha && success(known_commit_cmd)
+        log_step("Checking out QuIP commit: $(resolved.requested_sha)")
+        run(`git -C $repo_dir checkout --detach $(resolved.requested_sha)`)
+        return nothing
+    end
+
+    log_step("Checking out QuIP ref: $repo_ref")
+    run(`git -C $repo_dir fetch --depth 1 $(resolved.remote_url) $(resolved.fetch_ref)`)
+
+    fetched_sha = lowercase(readchomp(`git -C $repo_dir rev-parse FETCH_HEAD`))
+    if fetched_sha != resolved.requested_sha
+        error("Resolved `$repo_ref` to $(resolved.requested_sha), but fetch from `$(resolved.remote_url)` produced $fetched_sha.")
+    end
+
+    run(`git -C $repo_dir checkout --detach $(resolved.requested_sha)`)
+    return nothing
+end
+
+function validate_project_julia_version!(project_dir::AbstractString; in_colab::Bool = detect_colab())
+    manifest_version = manifest_julia_version(project_dir)
+    manifest_version === nothing && return nothing
+    manifest_version == VERSION && return nothing
+
+    allow_mismatch = something(env_bool(ALLOW_VERSION_MISMATCH_ENV), false)
+    message = "The Julia manifest at $(manifest_path(project_dir)) targets Julia $(manifest_version), but the current kernel is Julia $(VERSION)."
+
+    if in_colab && !allow_mismatch
+        error(message * " Restart the notebook with Julia $(manifest_version) or set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.")
+    end
+
+    @warn message * " Continuing because $(ALLOW_VERSION_MISMATCH_ENV)=1 or Colab mode is disabled."
+    return nothing
 end
 
 function candidate_repo_dirs(; cwd::AbstractString = pwd())
@@ -114,7 +220,11 @@ end
 
 function ensure_repo_root(; in_colab::Bool = detect_colab())
     repo_dir = find_repo_root()
+    repo_ref = requested_repo_ref()
     if repo_dir !== nothing
+        if repo_ref !== nothing
+            checkout_repo_ref!(repo_dir, repo_ref)
+        end
         return repo_dir
     end
 
@@ -128,6 +238,10 @@ function ensure_repo_root(; in_colab::Bool = detect_colab())
         run(`git clone --depth 1 https://github.com/SECQUOIA/QuIP.git $repo_dir`)
     else
         log_step("Using existing QuIP clone at $repo_dir")
+    end
+
+    if repo_ref !== nothing
+        checkout_repo_ref!(repo_dir, repo_ref)
     end
 
     if !is_repo_root(repo_dir)
@@ -218,6 +332,13 @@ function bootstrap_notebook(
 
     log_step("Notebook project key: $project_key")
     log_step("Google Colab runtime detected: $(in_colab)")
+    if in_colab
+        manifest_version = manifest_julia_version(project_dir)
+        if manifest_version !== nothing
+            log_step("Manifest Julia version: $(manifest_version)")
+        end
+    end
+    validate_project_julia_version!(project_dir; in_colab = in_colab)
 
     if needs_python
         configure_python_runtime!(repo_dir; in_colab = in_colab, python_packages = python_packages)
@@ -255,6 +376,7 @@ function instantiate_notebook_project(
         configure_python_runtime!(repo_dir; in_colab = false, python_packages = String[])
     end
 
+    validate_project_julia_version!(project_dir; in_colab = false)
     instantiate_project!(project_dir; precompile = precompile)
     return project_dir
 end

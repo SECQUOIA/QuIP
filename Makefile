@@ -4,7 +4,7 @@ UV ?= uv
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
 UV_GROUP_FLAGS ?= --group docs --group mathprog
 JULIA_PKG_PRECOMPILE_AUTO ?= 0
-JULIA_VERSION ?= 1.11
+JULIA_VERSION ?= 1.11.5
 JULIA ?= $(shell JULIA_VERSION=$(JULIA_VERSION) ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)

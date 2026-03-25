@@ -14,6 +14,8 @@ function run_smoke(target::AbstractString)
         error("No import smoke is defined for notebook `$key`.")
     end
 
+    QuIPNotebookBootstrap.instantiate_scripts_project(precompile = false)
+    import IJulia
     QuIPNotebookBootstrap.instantiate_notebook_project(target)
     Core.eval(Main, import_expr)
     println("$key imports ok")

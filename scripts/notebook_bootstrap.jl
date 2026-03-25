@@ -381,6 +381,18 @@ function instantiate_notebook_project(
     return project_dir
 end
 
+function instantiate_scripts_project(; precompile::Bool = false)
+    repo_dir = ensure_repo_root(in_colab = false)
+    project_dir = joinpath(repo_dir, "scripts")
+
+    if !isdir(project_dir)
+        error("Scripts project was not found at $project_dir.")
+    end
+
+    instantiate_project!(project_dir; precompile = precompile)
+    return project_dir
+end
+
 function instantiate_sysimage_project(
     target::Union{Nothing, AbstractString} = nothing;
     precompile::Bool = false,

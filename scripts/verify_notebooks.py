@@ -114,6 +114,21 @@ def instantiate_julia_project(notebook: Path) -> None:
     )
 
 
+def instantiate_julia_kernel_project() -> None:
+    run(
+        [
+            find_julia_executable(),
+            "--project=./scripts",
+            "-e",
+            'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_scripts_project(precompile=false)',
+        ],
+        env={
+            "JULIA_DEPOT_PATH": default_julia_depot_path(),
+            "JULIA_PKG_PRECOMPILE_AUTO": "0",
+        },
+    )
+
+
 def python_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
     kernels_dir = tmpdir / "kernels" / PYTHON_KERNEL_NAME
     kernels_dir.mkdir(parents=True, exist_ok=True)
@@ -228,18 +243,7 @@ def main() -> int:
                 )
 
     if julia_notebooks:
-        run(
-            [
-                find_julia_executable(),
-                "--project=./scripts",
-                "-e",
-                "import Pkg; Pkg.instantiate()",
-            ],
-            env={
-                "JULIA_DEPOT_PATH": default_julia_depot_path(),
-                "JULIA_PKG_PRECOMPILE_AUTO": "0",
-            },
-        )
+        instantiate_julia_kernel_project()
         with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
             kernel_name, env = julia_kernel_spec_dir(Path(tmp))
             for notebook in julia_notebooks:

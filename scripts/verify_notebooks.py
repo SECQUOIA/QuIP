@@ -21,7 +21,23 @@ FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
 PYTHON_KERNEL_NAME = "quip-python-local"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
-EXECUTION_TIMEOUT_SECONDS = int(os.environ.get("QUIP_NOTEBOOK_TIMEOUT", "1200"))
+
+
+def parse_execution_timeout_seconds() -> int:
+    value = os.environ.get("QUIP_NOTEBOOK_TIMEOUT", "1200")
+    try:
+        timeout_seconds = int(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid QUIP_NOTEBOOK_TIMEOUT value {value!r}: must be an integer number of seconds."
+        ) from exc
+
+    if timeout_seconds <= 0:
+        raise ValueError(
+            f"Invalid QUIP_NOTEBOOK_TIMEOUT value {value!r}: must be a positive integer number of seconds."
+        )
+
+    return timeout_seconds
 
 
 def default_julia_depot_path() -> str:
@@ -149,7 +165,13 @@ def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
     return JULIA_KERNEL_NAME, env
 
 
-def execute_notebook(path: Path, *, kernel_name: str | None = None, env: dict[str, str] | None = None) -> None:
+def execute_notebook(
+    path: Path,
+    *,
+    timeout_seconds: int,
+    kernel_name: str | None = None,
+    env: dict[str, str] | None = None,
+) -> None:
     outdir = output_dir()
     cmd = [
         sys.executable,
@@ -159,7 +181,7 @@ def execute_notebook(path: Path, *, kernel_name: str | None = None, env: dict[st
         "--to",
         "notebook",
         "--execute",
-        f"--ExecutePreprocessor.timeout={EXECUTION_TIMEOUT_SECONDS}",
+        f"--ExecutePreprocessor.timeout={timeout_seconds}",
         "--output-dir",
         str(outdir),
     ]
@@ -185,6 +207,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     notebooks = [Path(path) for path in args.notebooks]
+    timeout_seconds = parse_execution_timeout_seconds()
 
     for notebook in notebooks:
         if not (REPO_ROOT / notebook).is_file():
@@ -197,7 +220,12 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="quip-python-kernels-") as tmp:
             kernel_name, env = python_kernel_spec_dir(Path(tmp))
             for notebook in python_notebooks:
-                execute_notebook(notebook, kernel_name=kernel_name, env=env)
+                execute_notebook(
+                    notebook,
+                    timeout_seconds=timeout_seconds,
+                    kernel_name=kernel_name,
+                    env=env,
+                )
 
     if julia_notebooks:
         run(
@@ -216,7 +244,12 @@ def main() -> int:
             kernel_name, env = julia_kernel_spec_dir(Path(tmp))
             for notebook in julia_notebooks:
                 instantiate_julia_project(notebook)
-                execute_notebook(notebook, kernel_name=kernel_name, env=env)
+                execute_notebook(
+                    notebook,
+                    timeout_seconds=timeout_seconds,
+                    kernel_name=kernel_name,
+                    env=env,
+                )
 
     print(f"Executed {len(notebooks)} notebook(s). Outputs written to {output_dir()}")
     return 0

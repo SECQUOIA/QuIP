@@ -6,6 +6,7 @@ on:
     paths:
       - "**/*.ipynb"
       - "**/*.md"
+      - "tests/**"
       - ".github/workflows/jupyter-book.yml"
       - ".python-version"
       - "_config.yml"
@@ -22,6 +23,7 @@ on:
     paths:
       - "**/*.ipynb"
       - "**/*.md"
+      - "tests/**"
       - ".github/workflows/jupyter-book.yml"
       - ".python-version"
       - "_config.yml"
@@ -67,6 +69,10 @@ jobs:
       - name: Sync docs environment
         run: |
           uv sync --locked --group docs
+
+      - name: Run Python unit tests
+        run: |
+          uv run --group docs python -m unittest discover -s tests
 
       - name: Build Jupyter Book
         run: |

@@ -18,8 +18,10 @@ DEFAULT_NOTEBOOKS = (
 )
 DEFAULT_JULIA_VERSION = "1.11.5"
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
+PYTHON_KERNEL_NAME = "quip-python-local"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
+EXECUTION_TIMEOUT_SECONDS = int(os.environ.get("QUIP_NOTEBOOK_TIMEOUT", "1200"))
 
 
 def default_julia_depot_path() -> str:
@@ -96,6 +98,25 @@ def instantiate_julia_project(notebook: Path) -> None:
     )
 
 
+def python_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
+    kernels_dir = tmpdir / "kernels" / PYTHON_KERNEL_NAME
+    kernels_dir.mkdir(parents=True, exist_ok=True)
+    kernel_spec = {
+        "argv": [
+            sys.executable,
+            "-m",
+            "ipykernel_launcher",
+            "-f",
+            "{connection_file}",
+        ],
+        "display_name": "QuIP Python (local)",
+        "language": "python",
+        "interrupt_mode": "signal",
+    }
+    (kernels_dir / "kernel.json").write_text(json.dumps(kernel_spec, indent=2) + "\n")
+    return PYTHON_KERNEL_NAME, {"JUPYTER_PATH": str(tmpdir)}
+
+
 def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
     julia_exe = find_julia_executable()
     kernels_dir = tmpdir / "kernels" / JULIA_KERNEL_NAME
@@ -138,7 +159,7 @@ def execute_notebook(path: Path, *, kernel_name: str | None = None, env: dict[st
         "--to",
         "notebook",
         "--execute",
-        "--ExecutePreprocessor.timeout=1200",
+        f"--ExecutePreprocessor.timeout={EXECUTION_TIMEOUT_SECONDS}",
         "--output-dir",
         str(outdir),
     ]
@@ -172,8 +193,11 @@ def main() -> int:
     julia_notebooks = [path for path in notebooks if classify_notebook(path) == "julia"]
     python_notebooks = [path for path in notebooks if classify_notebook(path) == "python"]
 
-    for notebook in python_notebooks:
-        execute_notebook(notebook, kernel_name="python3")
+    if python_notebooks:
+        with tempfile.TemporaryDirectory(prefix="quip-python-kernels-") as tmp:
+            kernel_name, env = python_kernel_spec_dir(Path(tmp))
+            for notebook in python_notebooks:
+                execute_notebook(notebook, kernel_name=kernel_name, env=env)
 
     if julia_notebooks:
         run(

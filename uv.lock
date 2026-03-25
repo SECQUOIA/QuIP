@@ -2519,6 +2519,8 @@ source = { virtual = "." }
 docs = [
     { name = "jupyter-book" },
     { name = "jupyterlab" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 mathprog = [
     { name = "highspy" },
@@ -2554,6 +2556,7 @@ qubo = [
 docs = [
     { name = "jupyter-book", specifier = "==2.1.0" },
     { name = "jupyterlab", specifier = ">=4.4,<5" },
+    { name = "numpy", specifier = ">=1.26,<3" },
 ]
 mathprog = [
     { name = "highspy", specifier = ">=1.11,<2" },

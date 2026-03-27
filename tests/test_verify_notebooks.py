@@ -15,6 +15,8 @@ assert SPEC.loader is not None
 verify_notebooks = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(verify_notebooks)
 MAKEFILE_PATH = Path(__file__).resolve().parents[1] / "Makefile"
+WORKFLOW_PATH = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "jupyter-book.yml"
+VERIFY_JULIA_SMOKES_PATH = Path(__file__).resolve().parents[1] / "scripts" / "verify_julia_env_smokes.jl"
 
 
 class ParseExecutionTimeoutSecondsTests(unittest.TestCase):
@@ -78,6 +80,40 @@ class SetupJuliaTargetTests(unittest.TestCase):
             body.index("QuIPNotebookBootstrap.instantiate_scripts_project"),
             body.index("QuIPNotebookBootstrap.instantiate_notebook_project"),
         )
+
+    def test_notebook5_cache_smoke_target_runs_dedicated_script(self) -> None:
+        makefile = MAKEFILE_PATH.read_text()
+        match = re.search(
+            r"^verify-julia-notebook5-cache-smoke:\n(?P<body>(?:\t.*\n)+)",
+            makefile,
+            re.MULTILINE,
+        )
+        assert match is not None
+        body = match.group("body")
+
+        self.assertIn("./scripts/verify_notebook5_julia_cache_smoke.jl", body)
+
+
+class JuliaSmokeScriptTests(unittest.TestCase):
+    def test_smoke_script_loads_ijulia_via_core_eval_after_scripts_project(self) -> None:
+        source = VERIFY_JULIA_SMOKES_PATH.read_text()
+
+        self.assertIn("QuIPNotebookBootstrap.instantiate_scripts_project", source)
+        self.assertIn("Core.eval(Main, :(import IJulia))", source)
+        self.assertNotIn("\n    import IJulia\n", source)
+        self.assertLess(
+            source.index("QuIPNotebookBootstrap.instantiate_scripts_project"),
+            source.index("Core.eval(Main, :(import IJulia))"),
+        )
+
+
+class WorkflowCoverageTests(unittest.TestCase):
+    def test_workflow_runs_julia_notebook_smokes(self) -> None:
+        workflow = WORKFLOW_PATH.read_text()
+
+        self.assertIn("julia-notebook-smokes:", workflow)
+        self.assertIn("make verify-julia-colab-smokes COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking", workflow)
+        self.assertIn("make verify-julia-notebook5-cache-smoke", workflow)
 
 
 if __name__ == "__main__":

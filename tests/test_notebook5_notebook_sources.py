@@ -24,6 +24,16 @@ def matching_code_cells(path: Path, needle: str) -> list[str]:
     return cells
 
 
+def matching_markdown_cells(path: Path, needle: str) -> list[str]:
+    notebook = load_notebook(path)
+    cells: list[str] = []
+    for cell in notebook["cells"]:
+        source = "".join(cell.get("source", []))
+        if cell.get("cell_type") == "markdown" and needle in source:
+            cells.append(source)
+    return cells
+
+
 def matching_profile_cells(path: Path, title_needle: str) -> list[str]:
     return [
         source
@@ -129,6 +139,15 @@ class Notebook5SourceRegressionTests(unittest.TestCase):
         self.assertIn('pyimport("dwave.samplers")', julia_source)
         self.assertIn("direct_sample_ising", julia_source)
         self.assertIn("MODEL_ISING_DATA", julia_source)
+
+    def test_julia_notebook_documents_direct_sampler_workaround(self) -> None:
+        markdown_cells = matching_markdown_cells(NOTEBOOK_JL_PATH, "DWave.jl")
+        self.assertTrue(markdown_cells)
+
+        joined_markdown = "\n".join(markdown_cells)
+        self.assertIn("dwave.samplers", joined_markdown)
+        self.assertIn("PythonCall", joined_markdown)
+        self.assertIn("JuliaQUBO/DWave.jl/issues/15", joined_markdown)
 
 
 if __name__ == "__main__":

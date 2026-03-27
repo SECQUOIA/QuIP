@@ -1,4 +1,4 @@
-.PHONY: setup-julia sysimage verify-notebooks verify-mathprog verify-qubo-python verify-julia-colab verify-julia-colab-notebooks verify-julia-colab-smokes install-julia-colab-hook
+.PHONY: setup-julia sysimage verify-notebooks verify-mathprog verify-qubo-python verify-julia-colab verify-julia-colab-notebooks verify-julia-colab-smokes verify-julia-notebook5-cache-smoke install-julia-colab-hook
 
 UV ?= uv
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
@@ -46,6 +46,7 @@ verify-qubo-python:
 verify-julia-colab:
 	$(MAKE) verify-julia-colab-notebooks
 	$(MAKE) verify-julia-colab-smokes
+	$(MAKE) verify-julia-notebook5-cache-smoke
 
 verify-julia-colab-notebooks:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)
@@ -54,6 +55,10 @@ verify-julia-colab-notebooks:
 verify-julia-colab-smokes:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)
 	JULIA_BIN=$(COLAB_JULIA) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(COLAB_JULIA) --project=./scripts ./scripts/verify_julia_env_smokes.jl $(COLAB_JULIA_SMOKE_NOTEBOOKS)
+
+verify-julia-notebook5-cache-smoke:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)
+	JULIA_BIN=$(COLAB_JULIA) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(COLAB_JULIA) --project=./scripts ./scripts/verify_notebook5_julia_cache_smoke.jl
 
 install-julia-colab-hook:
 	chmod +x .githooks/pre-commit

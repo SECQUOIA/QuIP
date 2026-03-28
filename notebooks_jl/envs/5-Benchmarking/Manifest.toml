@@ -156,7 +156,9 @@ version = "0.6.3"
 
 [[deps.DWave]]
 deps = ["Graphs", "JSON", "MathOptInterface", "PythonCall", "QUBODrivers", "QUBOTools"]
-git-tree-sha1 = "a2abc894e0ebd2ac8e814c82fe361c52d9104a4f"
+git-tree-sha1 = "d329f5ad64842aa34180fc39c9c467dc5241b895"
+repo-rev = "2a3346c54336b0ce4c184567859ec3ffd1dac601"
+repo-url = "https://github.com/JuliaQUBO/DWave.jl"
 uuid = "4d534982-bf11-4157-9e48-fe3a62208a50"
 version = "0.5.2"
 

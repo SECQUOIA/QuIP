@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_PY_PATH = REPO_ROOT / "notebooks_py" / "5-Benchmarking_python.ipynb"
 NOTEBOOK_JL_PATH = REPO_ROOT / "notebooks_jl" / "5-Benchmarking.ipynb"
+JULIA_DWAVE_ENVS = ("2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking", "sysimage")
+DWAVE_FIX_REV = "2a3346c54336b0ce4c184567859ec3ffd1dac601"
 
 
 def load_notebook(path: Path) -> dict[str, object]:
@@ -134,20 +137,38 @@ class Notebook5SourceRegressionTests(unittest.TestCase):
         self.assertNotIn("Random.seed!", julia_source)
         self.assertIn("permutedims(reshape(example2_uniform_values", julia_source)
 
-    def test_julia_profile_cache_path_uses_direct_python_sampler(self) -> None:
+    def test_julia_profile_cache_path_uses_dwavel_neal_optimizer(self) -> None:
         julia_source = first_cell_with(NOTEBOOK_JL_PATH, "function load_or_generate_solution")
-        self.assertIn('pyimport("dwave.samplers")', julia_source)
-        self.assertIn("direct_sample_ising", julia_source)
-        self.assertIn("MODEL_ISING_DATA", julia_source)
+        self.assertIn("neal_sample_ising", julia_source)
+        self.assertIn('set_optimizer(instance_model, DWave.Neal.Optimizer)', julia_source)
+        self.assertIn("QUBOTools.solution(unsafe_backend(instance_model))", julia_source)
+        self.assertNotIn('pyimport("dwave.samplers")', julia_source)
+        self.assertNotIn("direct_sample_ising", julia_source)
+        self.assertNotIn("MODEL_ISING_DATA", julia_source)
 
-    def test_julia_notebook_documents_direct_sampler_workaround(self) -> None:
+    def test_julia_notebook_documents_dwavel_directly(self) -> None:
         markdown_cells = matching_markdown_cells(NOTEBOOK_JL_PATH, "DWave.jl")
         self.assertTrue(markdown_cells)
 
         joined_markdown = "\n".join(markdown_cells)
-        self.assertIn("dwave.samplers", joined_markdown)
-        self.assertIn("PythonCall", joined_markdown)
-        self.assertIn("JuliaQUBO/DWave.jl/issues/15", joined_markdown)
+        self.assertNotIn("dwave.samplers", joined_markdown)
+        self.assertNotIn("PythonCall", joined_markdown)
+        self.assertNotIn("JuliaQUBO/DWave.jl/issues/15", joined_markdown)
+
+    def test_all_julia_envs_pin_the_merged_dwavel_fix(self) -> None:
+        for env in JULIA_DWAVE_ENVS:
+            manifest_path = REPO_ROOT / "notebooks_jl" / "envs" / env / "Manifest.toml"
+            manifest = manifest_path.read_text()
+
+            self.assertRegex(
+                manifest,
+                re.compile(
+                    r"\[\[deps\.DWave\]\].*?"
+                    r'repo-rev = "' + re.escape(DWAVE_FIX_REV) + r'".*?'
+                    r'repo-url = "https://github\.com/JuliaQUBO/DWave\.jl"',
+                    re.S,
+                ),
+            )
 
 
 if __name__ == "__main__":

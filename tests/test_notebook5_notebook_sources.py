@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_PY_PATH = REPO_ROOT / "notebooks_py" / "5-Benchmarking_python.ipynb"
 NOTEBOOK_JL_PATH = REPO_ROOT / "notebooks_jl" / "5-Benchmarking.ipynb"
 JULIA_DWAVE_ENVS = ("2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking", "sysimage")
-DWAVE_MIN_VERSION = (0, 6, 2)
+DWAVE_MIN_VERSION = (0, 6, 3)
 
 
 def load_notebook(path: Path) -> dict[str, object]:

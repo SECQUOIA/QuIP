@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_PY_PATH = REPO_ROOT / "notebooks_py" / "5-Benchmarking_python.ipynb"
 NOTEBOOK_JL_PATH = REPO_ROOT / "notebooks_jl" / "5-Benchmarking.ipynb"
 JULIA_DWAVE_ENVS = ("2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking", "sysimage")
-DWAVE_FIX_REV = "2a3346c54336b0ce4c184567859ec3ffd1dac601"
+DWAVE_MIN_VERSION = (0, 6, 2)
 
 
 def load_notebook(path: Path) -> dict[str, object]:
@@ -155,19 +155,27 @@ class Notebook5SourceRegressionTests(unittest.TestCase):
         self.assertNotIn("PythonCall", joined_markdown)
         self.assertNotIn("JuliaQUBO/DWave.jl/issues/15", joined_markdown)
 
-    def test_all_julia_envs_pin_the_merged_dwavel_fix(self) -> None:
+    def test_all_julia_envs_use_released_dwavel(self) -> None:
         for env in JULIA_DWAVE_ENVS:
             manifest_path = REPO_ROOT / "notebooks_jl" / "envs" / env / "Manifest.toml"
             manifest = manifest_path.read_text()
 
-            self.assertRegex(
+            match = re.search(
+                r'\[\[deps\.DWave\]\].*?version = "(\d+)\.(\d+)\.(\d+)"',
                 manifest,
-                re.compile(
-                    r"\[\[deps\.DWave\]\].*?"
-                    r'repo-rev = "' + re.escape(DWAVE_FIX_REV) + r'".*?'
-                    r'repo-url = "https://github\.com/JuliaQUBO/DWave\.jl"',
-                    re.S,
-                ),
+                re.S,
+            )
+            self.assertIsNotNone(match, f"DWave entry not found in {env}/Manifest.toml")
+            version = tuple(int(match.group(i)) for i in (1, 2, 3))
+            self.assertGreaterEqual(
+                version,
+                DWAVE_MIN_VERSION,
+                f"{env}: DWave {'.'.join(map(str, version))} < {'.'.join(map(str, DWAVE_MIN_VERSION))}",
+            )
+            self.assertNotIn(
+                "repo-rev",
+                manifest.split("[[deps.DWave]]")[1].split("[[")[0],
+                f"{env}: DWave should come from the registry, not a git pin",
             )
 
 

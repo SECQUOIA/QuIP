@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -18,8 +19,26 @@ DEFAULT_NOTEBOOKS = (
 )
 DEFAULT_JULIA_VERSION = "1.11.5"
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
+PYTHON_KERNEL_NAME = "quip-python-local"
 JULIA_KERNEL_PROJECT = REPO_ROOT / "scripts"
 JULIA_KERNEL_NAME = "quip-julia-local"
+
+
+def parse_execution_timeout_seconds() -> int:
+    value = os.environ.get("QUIP_NOTEBOOK_TIMEOUT", "1200")
+    try:
+        timeout_seconds = int(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid QUIP_NOTEBOOK_TIMEOUT value {value!r}: must be an integer number of seconds."
+        ) from exc
+
+    if timeout_seconds <= 0:
+        raise ValueError(
+            f"Invalid QUIP_NOTEBOOK_TIMEOUT value {value!r}: must be a positive integer number of seconds."
+        )
+
+    return timeout_seconds
 
 
 def default_julia_depot_path() -> str:
@@ -30,13 +49,16 @@ def default_julia_depot_path() -> str:
     return os.pathsep.join(depots)
 
 
-def find_julia_executable() -> str:
+def find_julia_executable(julia_version: str | None = None) -> str:
     configured = os.environ.get("JULIA_BIN")
     if configured:
         return configured
 
     env = os.environ.copy()
-    env.setdefault("JULIA_VERSION", DEFAULT_JULIA_VERSION)
+    if julia_version is None:
+        env.setdefault("JULIA_VERSION", DEFAULT_JULIA_VERSION)
+    else:
+        env["JULIA_VERSION"] = julia_version
 
     try:
         result = subprocess.run(
@@ -80,10 +102,19 @@ def classify_notebook(path: Path) -> str:
     raise ValueError(f"Unsupported notebook path: {path}")
 
 
-def instantiate_julia_project(notebook: Path) -> None:
+def notebook_manifest_julia_version(notebook: Path) -> str | None:
+    manifest_path = REPO_ROOT / "notebooks_jl" / "envs" / notebook.stem / "Manifest.toml"
+    if not manifest_path.is_file():
+        return None
+
+    match = re.search(r'^julia_version = "([^"]+)"', manifest_path.read_text(), re.MULTILINE)
+    return None if match is None else match.group(1)
+
+
+def instantiate_julia_project(notebook: Path, *, julia_executable: str) -> None:
     run(
         [
-            find_julia_executable(),
+            julia_executable,
             "--project=./scripts",
             "-e",
             'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1]; precompile=true)',
@@ -96,13 +127,46 @@ def instantiate_julia_project(notebook: Path) -> None:
     )
 
 
-def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
-    julia_exe = find_julia_executable()
+def instantiate_julia_kernel_project(*, julia_executable: str) -> None:
+    run(
+        [
+            julia_executable,
+            "--project=./scripts",
+            "-e",
+            'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_scripts_project(precompile=false)',
+        ],
+        env={
+            "JULIA_DEPOT_PATH": default_julia_depot_path(),
+            "JULIA_PKG_PRECOMPILE_AUTO": "0",
+        },
+    )
+
+
+def python_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
+    kernels_dir = tmpdir / "kernels" / PYTHON_KERNEL_NAME
+    kernels_dir.mkdir(parents=True, exist_ok=True)
+    kernel_spec = {
+        "argv": [
+            sys.executable,
+            "-m",
+            "ipykernel_launcher",
+            "-f",
+            "{connection_file}",
+        ],
+        "display_name": "QuIP Python (local)",
+        "language": "python",
+        "interrupt_mode": "signal",
+    }
+    (kernels_dir / "kernel.json").write_text(json.dumps(kernel_spec, indent=2) + "\n")
+    return PYTHON_KERNEL_NAME, {"JUPYTER_PATH": str(tmpdir)}
+
+
+def julia_kernel_spec_dir(tmpdir: Path, *, julia_executable: str) -> tuple[str, dict[str, str]]:
     kernels_dir = tmpdir / "kernels" / JULIA_KERNEL_NAME
     kernels_dir.mkdir(parents=True, exist_ok=True)
     kernel_spec = {
         "argv": [
-            julia_exe,
+            julia_executable,
             "-i",
             "--color=yes",
             f"--project={JULIA_KERNEL_PROJECT}",
@@ -128,7 +192,13 @@ def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
     return JULIA_KERNEL_NAME, env
 
 
-def execute_notebook(path: Path, *, kernel_name: str | None = None, env: dict[str, str] | None = None) -> None:
+def execute_notebook(
+    path: Path,
+    *,
+    timeout_seconds: int,
+    kernel_name: str | None = None,
+    env: dict[str, str] | None = None,
+) -> None:
     outdir = output_dir()
     cmd = [
         sys.executable,
@@ -138,7 +208,7 @@ def execute_notebook(path: Path, *, kernel_name: str | None = None, env: dict[st
         "--to",
         "notebook",
         "--execute",
-        "--ExecutePreprocessor.timeout=1200",
+        f"--ExecutePreprocessor.timeout={timeout_seconds}",
         "--output-dir",
         str(outdir),
     ]
@@ -164,6 +234,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     notebooks = [Path(path) for path in args.notebooks]
+    timeout_seconds = parse_execution_timeout_seconds()
 
     for notebook in notebooks:
         if not (REPO_ROOT / notebook).is_file():
@@ -172,27 +243,38 @@ def main() -> int:
     julia_notebooks = [path for path in notebooks if classify_notebook(path) == "julia"]
     python_notebooks = [path for path in notebooks if classify_notebook(path) == "python"]
 
-    for notebook in python_notebooks:
-        execute_notebook(notebook, kernel_name="python3")
+    if python_notebooks:
+        with tempfile.TemporaryDirectory(prefix="quip-python-kernels-") as tmp:
+            kernel_name, env = python_kernel_spec_dir(Path(tmp))
+            for notebook in python_notebooks:
+                execute_notebook(
+                    notebook,
+                    timeout_seconds=timeout_seconds,
+                    kernel_name=kernel_name,
+                    env=env,
+                )
 
     if julia_notebooks:
-        run(
-            [
-                find_julia_executable(),
-                "--project=./scripts",
-                "-e",
-                "import Pkg; Pkg.instantiate()",
-            ],
-            env={
-                "JULIA_DEPOT_PATH": default_julia_depot_path(),
-                "JULIA_PKG_PRECOMPILE_AUTO": "0",
-            },
-        )
-        with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
-            kernel_name, env = julia_kernel_spec_dir(Path(tmp))
-            for notebook in julia_notebooks:
-                instantiate_julia_project(notebook)
-                execute_notebook(notebook, kernel_name=kernel_name, env=env)
+        for notebook in julia_notebooks:
+            julia_executable = find_julia_executable(
+                notebook_manifest_julia_version(notebook)
+            )
+            instantiate_julia_kernel_project(julia_executable=julia_executable)
+            with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
+                kernel_name, env = julia_kernel_spec_dir(
+                    Path(tmp),
+                    julia_executable=julia_executable,
+                )
+                instantiate_julia_project(
+                    notebook,
+                    julia_executable=julia_executable,
+                )
+                execute_notebook(
+                    notebook,
+                    timeout_seconds=timeout_seconds,
+                    kernel_name=kernel_name,
+                    env=env,
+                )
 
     print(f"Executed {len(notebooks)} notebook(s). Outputs written to {output_dir()}")
     return 0

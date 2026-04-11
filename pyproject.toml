@@ -9,6 +9,7 @@ dependencies = []
 docs = [
     "jupyterlab>=4.4,<5",
     "jupyter-book==2.1.0",
+    "numpy>=1.26,<3",
 ]
 mathprog = [
     "highspy>=1.11,<2",

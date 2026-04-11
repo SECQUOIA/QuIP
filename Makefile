@@ -8,13 +8,13 @@ JULIA_VERSION ?= 1.11.5
 JULIA ?= $(shell JULIA_VERSION=$(JULIA_VERSION) ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
-COLAB_JULIA_VERSION ?= $(JULIA_VERSION)
+COLAB_JULIA_VERSION ?= 1.11.9
 ifneq ($(filter command line environment override,$(origin JULIA)),)
 COLAB_JULIA ?= $(JULIA)
 else
 COLAB_JULIA ?= $(shell JULIA_VERSION=$(COLAB_JULIA_VERSION) ./scripts/find_julia.sh)
 endif
-COLAB_JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-colab-depot/$(COLAB_JULIA_VERSION):$(JULIA_HOME_DEPOT)
+COLAB_JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-colab-depot:$(JULIA_HOME_DEPOT)
 COLAB_UV_GROUP_FLAGS ?= --group docs --group mathprog --group qubo
 COLAB_JULIA_NOTEBOOKS ?= notebooks_jl/1-MathProg.ipynb notebooks_jl/2-QUBO.ipynb
 COLAB_JULIA_SMOKE_NOTEBOOKS ?= 3-GAMA 4-DWave 5-Benchmarking
@@ -35,7 +35,7 @@ sysimage:
 
 verify-notebooks:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(UV_GROUP_FLAGS)
-	UV_CACHE_DIR=$(UV_CACHE_DIR) JULIA_BIN=$(JULIA) JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(UV) run $(UV_GROUP_FLAGS) python ./scripts/verify_notebooks.py $(NOTEBOOKS)
+	UV_CACHE_DIR=$(UV_CACHE_DIR) JULIA_DEPOT_PATH=$(JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(UV) run $(UV_GROUP_FLAGS) python ./scripts/verify_notebooks.py $(NOTEBOOKS)
 
 verify-mathprog:
 	$(MAKE) verify-notebooks UV_GROUP_FLAGS="--group docs --group mathprog" NOTEBOOKS="notebooks_py/1-MathProg_python.ipynb notebooks_jl/1-MathProg.ipynb"
@@ -50,7 +50,7 @@ verify-julia-colab:
 
 verify-julia-colab-notebooks:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)
-	UV_CACHE_DIR=$(UV_CACHE_DIR) JULIA_BIN=$(COLAB_JULIA) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(UV) run $(COLAB_UV_GROUP_FLAGS) python ./scripts/verify_notebooks.py $(COLAB_JULIA_NOTEBOOKS)
+	UV_CACHE_DIR=$(UV_CACHE_DIR) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(UV) run $(COLAB_UV_GROUP_FLAGS) python ./scripts/verify_notebooks.py $(COLAB_JULIA_NOTEBOOKS)
 
 verify-julia-colab-smokes:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)

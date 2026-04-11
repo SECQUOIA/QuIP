@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -48,13 +49,16 @@ def default_julia_depot_path() -> str:
     return os.pathsep.join(depots)
 
 
-def find_julia_executable() -> str:
+def find_julia_executable(julia_version: str | None = None) -> str:
     configured = os.environ.get("JULIA_BIN")
     if configured:
         return configured
 
     env = os.environ.copy()
-    env.setdefault("JULIA_VERSION", DEFAULT_JULIA_VERSION)
+    if julia_version is None:
+        env.setdefault("JULIA_VERSION", DEFAULT_JULIA_VERSION)
+    else:
+        env["JULIA_VERSION"] = julia_version
 
     try:
         result = subprocess.run(
@@ -98,10 +102,19 @@ def classify_notebook(path: Path) -> str:
     raise ValueError(f"Unsupported notebook path: {path}")
 
 
-def instantiate_julia_project(notebook: Path) -> None:
+def notebook_manifest_julia_version(notebook: Path) -> str | None:
+    manifest_path = REPO_ROOT / "notebooks_jl" / "envs" / notebook.stem / "Manifest.toml"
+    if not manifest_path.is_file():
+        return None
+
+    match = re.search(r'^julia_version = "([^"]+)"', manifest_path.read_text(), re.MULTILINE)
+    return None if match is None else match.group(1)
+
+
+def instantiate_julia_project(notebook: Path, *, julia_executable: str) -> None:
     run(
         [
-            find_julia_executable(),
+            julia_executable,
             "--project=./scripts",
             "-e",
             'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_notebook_project(ARGS[1]; precompile=true)',
@@ -114,10 +127,10 @@ def instantiate_julia_project(notebook: Path) -> None:
     )
 
 
-def instantiate_julia_kernel_project() -> None:
+def instantiate_julia_kernel_project(*, julia_executable: str) -> None:
     run(
         [
-            find_julia_executable(),
+            julia_executable,
             "--project=./scripts",
             "-e",
             'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.instantiate_scripts_project(precompile=false)',
@@ -148,13 +161,12 @@ def python_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
     return PYTHON_KERNEL_NAME, {"JUPYTER_PATH": str(tmpdir)}
 
 
-def julia_kernel_spec_dir(tmpdir: Path) -> tuple[str, dict[str, str]]:
-    julia_exe = find_julia_executable()
+def julia_kernel_spec_dir(tmpdir: Path, *, julia_executable: str) -> tuple[str, dict[str, str]]:
     kernels_dir = tmpdir / "kernels" / JULIA_KERNEL_NAME
     kernels_dir.mkdir(parents=True, exist_ok=True)
     kernel_spec = {
         "argv": [
-            julia_exe,
+            julia_executable,
             "-i",
             "--color=yes",
             f"--project={JULIA_KERNEL_PROJECT}",
@@ -243,11 +255,20 @@ def main() -> int:
                 )
 
     if julia_notebooks:
-        instantiate_julia_kernel_project()
-        with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
-            kernel_name, env = julia_kernel_spec_dir(Path(tmp))
-            for notebook in julia_notebooks:
-                instantiate_julia_project(notebook)
+        for notebook in julia_notebooks:
+            julia_executable = find_julia_executable(
+                notebook_manifest_julia_version(notebook)
+            )
+            instantiate_julia_kernel_project(julia_executable=julia_executable)
+            with tempfile.TemporaryDirectory(prefix="quip-jupyter-kernels-") as tmp:
+                kernel_name, env = julia_kernel_spec_dir(
+                    Path(tmp),
+                    julia_executable=julia_executable,
+                )
+                instantiate_julia_project(
+                    notebook,
+                    julia_executable=julia_executable,
+                )
                 execute_notebook(
                     notebook,
                     timeout_seconds=timeout_seconds,

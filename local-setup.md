@@ -74,10 +74,12 @@ The built site will be written to `_build/html/index.html`.
    notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
    executes the Python QUBO notebook. Both write the executed copies to
    `.nbverify/`.
-   The Julia notebook checks default to Julia `1.11.5` so they match the
-   notebook manifests and the current Colab runtime; install it once with
-   `juliaup add 1.11.5`, or override `JULIA=/path/to/julia` if you need a
-   different compatible local binary.
+   The Julia notebook checks now resolve the Julia patch version from each
+   notebook manifest. At the moment that means installing both Julia `1.11.5`
+   and Julia `1.11.9` once with `juliaup add 1.11.5` and `juliaup add 1.11.9`.
+   If you intentionally want to force one specific binary for every notebook
+   execution, set `JULIA_BIN=/path/to/julia` in the environment before you run
+   the verification command.
    The verification flow keeps the Python package cache in `.uv-cache/`, so it
    does not depend on writing to a global `uv` cache. Julia writes temporary
    package state to `.julia-depot/` while still reusing packages already
@@ -89,31 +91,34 @@ The built site will be written to `_build/html/index.html`.
    make verify-notebooks NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb notebooks_jl/2-QUBO.ipynb"
    ```
 
-   To approximate Google Colab's Julia runtime locally, first install Julia
-   `1.11.5` once with `juliaup add 1.11.5`, then run the Colab-style Julia
-   check:
+   To approximate the current Google Colab Julia runtimes locally, first
+   install both Julia `1.11.5` and Julia `1.11.9` once with `juliaup add
+   1.11.5` and `juliaup add 1.11.9`, then run the Colab-style Julia check:
 
    ```bash
    make verify-julia-colab
    ```
 
-   This target uses `COLAB_JULIA` by default. If you set
-   `JULIA=/path/to/julia` to a compatible binary on the command line, the
-   Colab-style target will now reuse that binary unless you override
-   `COLAB_JULIA` explicitly. You can also pick a specific juliaup toolchain
-   with `COLAB_JULIA_VERSION=1.11.5`.
-   This target writes Julia state into
-   `.julia-colab-depot/1.11.5`, reuses registries and cached packages from
-   `~/.julia` when available, executes the Julia math programming and QUBO
-   notebooks end to end, and runs import/bootstrap smokes for the remaining
-   Julia notebooks. It is the recommended local check before changing the
-   Julia notebook bootstrap or notebook-specific Julia environments.
+   The notebook-execution portion of this target reads the required Julia patch
+   version from each notebook manifest. The smoke targets still use
+   `COLAB_JULIA`, which defaults to Julia `1.11.9` because the remaining Julia
+   smoke notebooks now target that version. If you set `JULIA=/path/to/julia`
+   to a compatible binary on the command line, the smoke targets will reuse
+   that binary unless you override `COLAB_JULIA` explicitly. You can also pick
+   a specific juliaup toolchain for the smoke targets with
+   `COLAB_JULIA_VERSION=1.11.9`.
+   This target writes Julia state into `.julia-colab-depot`, reuses registries
+   and cached packages from `~/.julia` when available, executes the Julia math
+   programming and QUBO notebooks end to end, and runs import/bootstrap smokes
+   for the remaining Julia notebooks. It is the recommended local check before
+   changing the Julia notebook bootstrap or notebook-specific Julia
+   environments.
 
    To force a colder check that does not fall back to `~/.julia`, override the
    depot path explicitly:
 
    ```bash
-   make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot/1.11.5"
+   make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot"
    ```
 
    The Colab bootstrap now validates the running Julia patch version against the

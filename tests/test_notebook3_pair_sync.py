@@ -86,6 +86,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
         markdown = notebook_markdown(PY_NOTEBOOK)
         self.assertIn("Environment and execution notes", markdown)
         self.assertIn("uv sync --group qubo", markdown)
+        self.assertIn("4ti2", markdown)
+        self.assertIn("Py4ti2int32", markdown)
         self.assertIn("graver.npy", markdown)
 
     def test_julia_notebook_keeps_bootstrap_setup_context(self) -> None:

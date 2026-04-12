@@ -109,6 +109,19 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertIn("QuIPML22", notebook_markdown(PY_NOTEBOOK))
         self.assertIn("QuIPML22", notebook_markdown(JL_NOTEBOOK))
 
+    def test_both_notebooks_share_the_same_core_narrative_anchors(self) -> None:
+        py_markdown = notebook_markdown(PY_NOTEBOOK)
+        jl_markdown = notebook_markdown(JL_NOTEBOOK)
+
+        for anchor in [
+            "First we would write this problem as an unconstrained one by penalizing the linear constraints as quadratics in the objective.",
+            "Now we can highlight another feature of the algorithm, computing starting feasible solutions.",
+            "We will use simulated annealing to solve this QUBO.",
+            "The Graver basis of this matrix $A$ has 29789 elements",
+        ]:
+            self.assertIn(anchor, py_markdown)
+            self.assertIn(anchor, jl_markdown)
+
     def test_julia_metadata_matches_the_committed_manifest(self) -> None:
         notebook = load_notebook(JL_NOTEBOOK)
         metadata_version = notebook["metadata"]["language_info"]["version"]

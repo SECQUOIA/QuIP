@@ -122,6 +122,31 @@ class Notebook3PairSyncTests(unittest.TestCase):
             self.assertIn(anchor, py_markdown)
             self.assertIn(anchor, jl_markdown)
 
+    def test_julia_notebook_uses_the_same_unbounded_graver_basis_path(self) -> None:
+        notebook = load_notebook(JL_NOTEBOOK)
+        code_text = "\n".join(
+            "".join(cell.get("source", []))
+            for cell in notebook["cells"]
+            if cell.get("cell_type") == "code"
+        )
+
+        self.assertIn("function compute_graver_basis_local(A)", code_text)
+        self.assertIn("function graver_basis(A)", code_text)
+        self.assertIn("G = graver_basis(A)", code_text)
+        self.assertNotIn('write_mat("$(proj_path).lb"', code_text)
+        self.assertNotIn('write_mat("$(proj_path).ub"', code_text)
+
+    def test_python_notebook_avoids_deprecated_bqm_constructor(self) -> None:
+        notebook = load_notebook(PY_NOTEBOOK)
+        code_text = "\n".join(
+            "".join(cell.get("source", []))
+            for cell in notebook["cells"]
+            if cell.get("cell_type") == "code"
+        )
+
+        self.assertIn('dimod.BinaryQuadraticModel(Q, "BINARY", offset=offset)', code_text)
+        self.assertNotIn("from_numpy_matrix", code_text)
+
     def test_julia_metadata_matches_the_committed_manifest(self) -> None:
         notebook = load_notebook(JL_NOTEBOOK)
         metadata_version = notebook["metadata"]["language_info"]["version"]

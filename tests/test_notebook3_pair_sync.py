@@ -119,6 +119,14 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertNotIn("proposed by [two]", notebook_markdown(PY_NOTEBOOK))
         self.assertNotIn("proposed by [two]", notebook_markdown(JL_NOTEBOOK))
 
+    def test_both_notebooks_link_intro_references_to_the_reference_section(self) -> None:
+        for markdown in [notebook_markdown(PY_NOTEBOOK), notebook_markdown(JL_NOTEBOOK)]:
+            self.assertIn("[Reference [1]](#reference-1)", markdown)
+            self.assertIn("[Reference [2]](#reference-2)", markdown)
+            self.assertIn('<a id="reference-1"></a>- [1]', markdown)
+            self.assertIn('<a id="reference-2"></a>- [2]', markdown)
+            self.assertIn('<a id="reference-3"></a>- [3]', markdown)
+
     def test_both_notebooks_share_the_same_core_narrative_anchors(self) -> None:
         py_markdown = notebook_markdown(PY_NOTEBOOK)
         jl_markdown = notebook_markdown(JL_NOTEBOOK)
@@ -195,6 +203,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Full-basis augmentation")', code_text)
         self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis augmentation")', code_text)
         self.assertIn('function plot_multiple_partial_augmentation(Y_feas, Y_mpaug, global_minimum)', code_text)
+        self.assertIn('"\\$ $(10i) %|G| \\$"', code_text)
+        self.assertNotIn('"\\$ $(10i) \\%|G| \\$"', code_text)
         self.assertIn('ylabel     = "Objective gap to best full-basis result"', code_text)
         self.assertIn("yscale     = :log10", code_text)
 

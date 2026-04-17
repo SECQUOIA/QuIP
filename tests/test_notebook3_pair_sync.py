@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import numpy as np
 import re
 import unittest
 from pathlib import Path
@@ -10,6 +11,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PY_NOTEBOOK = REPO_ROOT / "notebooks_py" / "3-GAMA_python.ipynb"
 JL_NOTEBOOK = REPO_ROOT / "notebooks_jl" / "3-GAMA.ipynb"
 JL_MANIFEST = REPO_ROOT / "notebooks_jl" / "envs" / "3-GAMA" / "Manifest.toml"
+NOTEBOOK_DATA_DIR = REPO_ROOT / "notebooks_data"
+COEFF_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_coefficients.csv"
+FEASIBLE_STARTS_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_feasible_starts.csv"
+GRAVER_ORDER_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_graver_order.csv"
 
 
 def load_notebook(path: Path) -> dict[str, object]:
@@ -140,6 +145,31 @@ class Notebook3PairSyncTests(unittest.TestCase):
             self.assertIn(anchor, py_markdown)
             self.assertIn(anchor, jl_markdown)
 
+    def test_shared_example_data_files_have_expected_shapes(self) -> None:
+        coeffs = np.loadtxt(COEFF_FILE, delimiter=",")
+        feasible_starts = np.loadtxt(FEASIBLE_STARTS_FILE, delimiter=",", dtype=int)
+        graver_order = np.loadtxt(GRAVER_ORDER_FILE, delimiter=",", dtype=int)
+
+        self.assertEqual(coeffs.shape, (2, 25))
+        self.assertEqual(feasible_starts.shape, (20, 25))
+        self.assertEqual(graver_order.shape, (29789,))
+        self.assertEqual(len(np.unique(graver_order)), 29789)
+
+    def test_both_notebooks_use_shared_instance_data_by_default(self) -> None:
+        py_code = notebook_code(PY_NOTEBOOK)
+        jl_code = notebook_code(JL_NOTEBOOK)
+        py_markdown = notebook_markdown(PY_NOTEBOOK)
+        jl_markdown = notebook_markdown(JL_NOTEBOOK)
+
+        for code_text in [py_code, jl_code]:
+            self.assertIn("3-GAMA_coefficients.csv", code_text)
+            self.assertIn("3-GAMA_feasible_starts.csv", code_text)
+            self.assertIn("3-GAMA_graver_order.csv", code_text)
+
+        for markdown in [py_markdown, jl_markdown]:
+            self.assertIn("single worked instance", markdown)
+            self.assertIn("directly comparable", markdown)
+
     def test_julia_notebook_uses_the_same_unbounded_graver_basis_path(self) -> None:
         code_text = notebook_code(JL_NOTEBOOK)
 
@@ -171,14 +201,14 @@ class Notebook3PairSyncTests(unittest.TestCase):
         for snippet in [
             '"""Return the index and value of the best augmentation candidate."""',
             '"""Compute the best integer step along a Graver direction within the box bounds."""',
-            '"""Apply one of the notebook\'s Graver augmentation strategies until convergence."""',
+            "The number of iterations performed, the last objective value, and the final point.",
         ]:
             self.assertIn(snippet, py_code)
 
         for snippet in [
             'Return the Graver basis of `A` by calling the bundled 4ti2 `graver` executable.',
             'Compute the best integer step size along a Graver direction within the box bounds.',
-            'Plot the initial and augmented objectives together with the iteration counts.',
+            'The boxplot object with zero-gap entries lifted for the log axis.',
         ]:
             self.assertIn(snippet, jl_code)
 
@@ -196,16 +226,40 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertIn("NPZ.npyread(npy_path)", code_text)
         self.assertNotIn("NPZ.npzread", code_text)
 
+    def test_notebooks_use_the_same_objective_sign_convention(self) -> None:
+        py_code = notebook_code(PY_NOTEBOOK)
+        jl_code = notebook_code(JL_NOTEBOOK)
+
+        self.assertIn("return -np.dot(mu, x)", py_code)
+        self.assertIn("f(x) = -μ'x +", jl_code)
+        self.assertNotIn("f(x) = μ'x +", jl_code)
+
+    def test_julia_markdown_avoids_literal_backslash_n_sequences(self) -> None:
+        self.assertNotIn("\\n", notebook_markdown(JL_NOTEBOOK))
+
+    def test_python_plotting_cells_use_shared_labels_and_log_axes(self) -> None:
+        code_text = notebook_code(PY_NOTEBOOK)
+
+        self.assertIn("Full-basis augmentation ({len(r)} Graver directions)", code_text)
+        self.assertIn("Partial-basis augmentation ({n_draws} sampled Graver directions)", code_text)
+        self.assertIn("plot_objective_gap_boxplot", code_text)
+        self.assertIn("Objective gap to best full-basis result", code_text)
+        self.assertIn("sample_labels = [f'{10 * i}%|G|' for i in range(1, N)]", code_text)
+        self.assertIn("ax1.set_yscale('log')", code_text)
+
     def test_julia_plot_helpers_capture_the_reviewed_experiment_labels(self) -> None:
         code_text = notebook_code(JL_NOTEBOOK)
 
         self.assertIn('function plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Augmentation")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Full-basis augmentation")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis augmentation")', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Full-basis augmentation ($(size(G, 1)) Graver directions)")', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis augmentation ($(num_partial_directions) sampled Graver directions)")', code_text)
+        self.assertIn('function plot_augmentation_runtime(T_aug, T_paug; partial_label = "10 sampled Graver directions")', code_text)
         self.assertIn('function plot_multiple_partial_augmentation(Y_feas, Y_mpaug, global_minimum)', code_text)
+        self.assertIn('function lift_zero_gaps(Y, global_minimum)', code_text)
         self.assertIn('"\\$ $(10i) %|G| \\$"', code_text)
         self.assertNotIn('"\\$ $(10i) \\%|G| \\$"', code_text)
         self.assertIn('ylabel     = "Objective gap to best full-basis result"', code_text)
+        self.assertIn('yticks     = (ticks, labels)', code_text)
         self.assertIn("yscale     = :log10", code_text)
 
     def test_julia_metadata_matches_the_committed_manifest(self) -> None:

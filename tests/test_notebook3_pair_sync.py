@@ -154,7 +154,10 @@ class Notebook3PairSyncTests(unittest.TestCase):
         jl_markdown = notebook_markdown(JL_NOTEBOOK)
 
         for anchor in [
-            "Other class examples appear in the QUBO and Benchmarking notebooks.",
+            "The original GAMA class notebook used `EXAMPLE = 1`, `EXAMPLE = 2`, `EXAMPLE = 3`, and `EXAMPLE = 4`.",
+            "#### Example 1: illustrative Graver augmentation",
+            "#### Example 2: four-variable linear example",
+            "#### Example 3: alternate four-variable linear example",
             "The remaining GAMA method below uses this saved Example 4 instance",
             "First we would write this problem as an unconstrained one by penalizing the linear constraints as quadratics in the objective.",
             "Now we can highlight another feature of the algorithm, computing starting feasible solutions.",
@@ -163,6 +166,17 @@ class Notebook3PairSyncTests(unittest.TestCase):
         ]:
             self.assertIn(anchor, py_markdown)
             self.assertIn(anchor, jl_markdown)
+
+        for example_snippet in [
+            r"A = \begin{bmatrix} 1 & 1 & 1 & 1 \\ 1 & 5 & 10 & 25 \end{bmatrix}",
+            r"x^{(0)} = \begin{bmatrix} 1 & 15 & 3 & 2 \end{bmatrix}",
+            r"c = \begin{bmatrix} 0 & 1 & 0 & 2 \end{bmatrix}",
+            r"x^{(0)} = \begin{bmatrix} 1 & 8 & 0 & 1 \end{bmatrix}",
+            r"c = \begin{bmatrix} 1 & 3 & 14 & 17 \end{bmatrix}",
+            r"x^{(0)} = \begin{bmatrix} 3 & 0 & 6 & 1 \end{bmatrix}",
+        ]:
+            self.assertIn(example_snippet, py_markdown)
+            self.assertIn(example_snippet, jl_markdown)
 
     def test_shared_example_data_files_have_expected_shapes(self) -> None:
         coeffs = np.loadtxt(COEFF_FILE, delimiter=",")
@@ -312,8 +326,10 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertNotIn('Partial-basis greedy augmentation\\n', code_text)
         self.assertIn('function plot_augmentation_runtime(T_aug, T_paug; partial_label = "10 sampled Graver directions")', code_text)
         self.assertIn('function log_ticks_for(values; include_zero_floor = nothing)', code_text)
-        self.assertIn("legend     = :topright", code_text)
+        self.assertIn("legend     = :outertopright", code_text)
+        self.assertIn("right_margin = 18mm", code_text)
         self.assertNotIn("legend     = (0.75, 0.25)", code_text)
+        self.assertNotIn("legend     = :topright", code_text)
         self.assertIn('function plot_multiple_partial_augmentation(Y_feas, Y_mpaug, global_minimum)', code_text)
         self.assertIn('function lift_zero_gaps(Y, global_minimum)', code_text)
         self.assertIn('"$(10i)% |G|"', code_text)

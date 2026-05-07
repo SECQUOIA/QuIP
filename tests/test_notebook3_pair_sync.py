@@ -39,6 +39,17 @@ def notebook_code(path: Path) -> str:
     )
 
 
+def notebook_stderr(path: Path) -> str:
+    notebook = load_notebook(path)
+    chunks: list[str] = []
+    for cell in notebook["cells"]:
+        for output in cell.get("outputs", []):
+            if output.get("output_type") == "stream" and output.get("name") == "stderr":
+                text = output.get("text", [])
+                chunks.append("".join(text) if isinstance(text, list) else str(text))
+    return "\n".join(chunks)
+
+
 def notebook_headers(path: Path) -> list[str]:
     notebook = load_notebook(path)
     headers: list[str] = []
@@ -125,12 +136,16 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertNotIn("proposed by [two]", notebook_markdown(JL_NOTEBOOK))
 
     def test_both_notebooks_link_intro_references_to_the_reference_section(self) -> None:
-        for markdown in [notebook_markdown(PY_NOTEBOOK), notebook_markdown(JL_NOTEBOOK)]:
-            self.assertIn("[Reference [1]](#reference-1)", markdown)
-            self.assertIn("[Reference [2]](#reference-2)", markdown)
-            self.assertIn('<a id="reference-1"></a>- [1]', markdown)
-            self.assertIn('<a id="reference-2"></a>- [2]', markdown)
-            self.assertIn('<a id="reference-3"></a>- [3]', markdown)
+        for path, prefix in [(PY_NOTEBOOK, "gama-python"), (JL_NOTEBOOK, "gama-julia")]:
+            markdown = notebook_markdown(path)
+            self.assertIn(f"[Reference [1]](#{prefix}-reference-1)", markdown)
+            self.assertIn(f"[Reference [2]](#{prefix}-reference-2)", markdown)
+            self.assertIn(f"({prefix}-reference-1)=\n- [1]", markdown)
+            self.assertIn(f"({prefix}-reference-2)=\n- [2]", markdown)
+            self.assertIn(f"({prefix}-reference-3)=\n- [3]", markdown)
+            self.assertNotIn('<a id="reference-1"></a>', markdown)
+            self.assertNotIn('<a id="reference-2"></a>', markdown)
+            self.assertNotIn('<a id="reference-3"></a>', markdown)
 
     def test_both_notebooks_share_the_same_core_narrative_anchors(self) -> None:
         py_markdown = notebook_markdown(PY_NOTEBOOK)
@@ -167,8 +182,28 @@ class Notebook3PairSyncTests(unittest.TestCase):
             self.assertIn("3-GAMA_graver_order.csv", code_text)
 
         for markdown in [py_markdown, jl_markdown]:
-            self.assertIn("single worked instance", markdown)
-            self.assertIn("directly comparable", markdown)
+            self.assertIn("saved instance", markdown)
+            self.assertIn("reproducible", markdown)
+            self.assertNotIn("directly comparable", markdown)
+            self.assertNotIn("both notebooks load", markdown)
+            self.assertNotIn("Python and Julia versions begin", markdown)
+
+        self.assertLess(
+            py_code.index("def load_precomputed_feasible_starts"),
+            py_code.index("def get_feasible(A, b"),
+        )
+        self.assertLess(
+            py_code.index("def load_graver_order"),
+            py_code.index("def get_feasible(A, b"),
+        )
+        self.assertLess(
+            jl_code.index("function load_precomputed_feasible_starts"),
+            jl_code.index("function get_feasible(A, b"),
+        )
+        self.assertLess(
+            jl_code.index("function load_graver_order"),
+            jl_code.index("function get_feasible(A, b"),
+        )
 
     def test_julia_notebook_uses_the_same_unbounded_graver_basis_path(self) -> None:
         code_text = notebook_code(JL_NOTEBOOK)
@@ -240,27 +275,38 @@ class Notebook3PairSyncTests(unittest.TestCase):
     def test_python_plotting_cells_use_shared_labels_and_log_axes(self) -> None:
         code_text = notebook_code(PY_NOTEBOOK)
 
-        self.assertIn("Full-basis augmentation ({len(r)} Graver directions)", code_text)
-        self.assertIn("Partial-basis augmentation ({n_draws} sampled Graver directions)", code_text)
+        self.assertIn("Complete-basis greedy augmentation\\n({len(r)} Graver directions)", code_text)
+        self.assertIn("Partial-basis greedy augmentation\\n({n_draws} sampled Graver directions)", code_text)
         self.assertIn("plot_objective_gap_boxplot", code_text)
         self.assertIn("Objective gap to best full-basis result", code_text)
-        self.assertIn("sample_labels = [f'{10 * i}%|G|' for i in range(1, N)]", code_text)
+        self.assertIn("sample_labels = [f'{10 * i}% |G|' for i in range(1, N)]", code_text)
+        self.assertIn("sample_labels.append('Complete basis')", code_text)
+        self.assertIn("f'{t:.1e}'", code_text)
         self.assertIn("ax1.set_yscale('log')", code_text)
 
     def test_julia_plot_helpers_capture_the_reviewed_experiment_labels(self) -> None:
         code_text = notebook_code(JL_NOTEBOOK)
 
         self.assertIn('function plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Augmentation")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Full-basis augmentation ($(size(G, 1)) Graver directions)")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis augmentation ($(num_partial_directions) sampled Graver directions)")', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Complete-basis greedy augmentation\\n($(size(G, 1)) Graver directions)")', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis greedy augmentation\\n($(num_partial_directions) sampled Graver directions)")', code_text)
         self.assertIn('function plot_augmentation_runtime(T_aug, T_paug; partial_label = "10 sampled Graver directions")', code_text)
+        self.assertIn('function log_ticks_for(values; include_zero_floor = nothing)', code_text)
         self.assertIn('function plot_multiple_partial_augmentation(Y_feas, Y_mpaug, global_minimum)', code_text)
         self.assertIn('function lift_zero_gaps(Y, global_minimum)', code_text)
-        self.assertIn('"\\$ $(10i) %|G| \\$"', code_text)
+        self.assertIn('"$(10i)% |G|"', code_text)
+        self.assertIn('@sprintf("%.1e", t)', code_text)
+        self.assertNotIn('"\\$ $(10i) %|G| \\$"', code_text)
         self.assertNotIn('"\\$ $(10i) \\%|G| \\$"', code_text)
         self.assertIn('ylabel     = "Objective gap to best full-basis result"', code_text)
         self.assertIn('yticks     = (ticks, labels)', code_text)
         self.assertIn("yscale     = :log10", code_text)
+
+    def test_committed_julia_outputs_do_not_include_plot_label_errors(self) -> None:
+        stderr = notebook_stderr(JL_NOTEBOOK)
+
+        self.assertNotIn("ERROR: syntax error", stderr)
+        self.assertNotIn("No strict ticks found", stderr)
 
     def test_julia_metadata_matches_the_committed_manifest(self) -> None:
         notebook = load_notebook(JL_NOTEBOOK)

@@ -17,6 +17,64 @@ FEASIBLE_STARTS_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_example4_feasible_starts.csv"
 GRAVER_ORDER_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_example4_graver_order.csv"
 
 
+CLASS_REFERENCE_EXAMPLES = [
+    {
+        "name": "Example 1",
+        "A": np.array([[1, 1, 1, 1], [1, 5, 10, 25]]),
+        "b": np.array([21, 156]),
+        "x0": np.array([1, 15, 3, 2]),
+        "x_lo": np.zeros(4, dtype=int),
+        "x_up": 15 * np.ones(4, dtype=int),
+        "c": None,
+        "graver_directions": np.array(
+            [
+                [5, -6, 0, 1],
+                [5, -9, 4, 0],
+                [0, 3, -4, 1],
+                [5, -3, -4, 2],
+                [5, 0, -8, 3],
+            ]
+        ),
+    },
+    {
+        "name": "Example 2",
+        "A": np.array([[1, 1, 1, 1], [1, 2, 3, 4]]),
+        "b": np.array([10, 21]),
+        "x0": np.array([1, 8, 0, 1]),
+        "x_lo": np.zeros(4, dtype=int),
+        "x_up": 21 * np.ones(4, dtype=int),
+        "c": np.array([0, 1, 0, 2]),
+        "graver_directions": np.array(
+            [
+                [1, -2, 1, 0],
+                [2, -3, 0, 1],
+                [1, -1, -1, 1],
+                [0, 1, -2, 1],
+                [1, 0, -3, 2],
+            ]
+        ),
+    },
+    {
+        "name": "Example 3",
+        "A": np.array([[1, 1, 1, 1], [0, 1, 2, 3]]),
+        "b": np.array([10, 15]),
+        "x0": np.array([3, 0, 6, 1]),
+        "x_lo": np.zeros(4, dtype=int),
+        "x_up": 10 * np.ones(4, dtype=int),
+        "c": np.array([1, 3, 14, 17]),
+        "graver_directions": np.array(
+            [
+                [2, -3, 0, 1],
+                [1, -2, 1, 0],
+                [1, -1, -1, 1],
+                [0, 1, -2, 1],
+                [1, 0, -3, 2],
+            ]
+        ),
+    },
+]
+
+
 def load_notebook(path: Path) -> dict[str, object]:
     return json.loads(path.read_text())
 
@@ -177,6 +235,29 @@ class Notebook3PairSyncTests(unittest.TestCase):
         ]:
             self.assertIn(example_snippet, py_markdown)
             self.assertIn(example_snippet, jl_markdown)
+
+    def test_restored_class_examples_are_feasible_small_instances(self) -> None:
+        for example in CLASS_REFERENCE_EXAMPLES:
+            with self.subTest(example=example["name"]):
+                A = example["A"]
+                b = example["b"]
+                x0 = example["x0"]
+                x_lo = example["x_lo"]
+                x_up = example["x_up"]
+                c = example["c"]
+                graver_directions = example["graver_directions"]
+
+                np.testing.assert_array_equal(A @ x0, b)
+                self.assertTrue(np.all(x_lo <= x0))
+                self.assertTrue(np.all(x0 <= x_up))
+
+                if c is not None:
+                    self.assertEqual(c.shape, x0.shape)
+
+                self.assertEqual(graver_directions.shape, (5, x0.size))
+                self.assertFalse(np.any(np.all(graver_directions == 0, axis=1)))
+                expected_kernel_products = np.zeros((A.shape[0], 5), dtype=int)
+                np.testing.assert_array_equal(A @ graver_directions.T, expected_kernel_products)
 
     def test_shared_example_data_files_have_expected_shapes(self) -> None:
         coeffs = np.loadtxt(COEFF_FILE, delimiter=",")

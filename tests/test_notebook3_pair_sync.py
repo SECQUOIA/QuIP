@@ -12,9 +12,9 @@ PY_NOTEBOOK = REPO_ROOT / "notebooks_py" / "3-GAMA_python.ipynb"
 JL_NOTEBOOK = REPO_ROOT / "notebooks_jl" / "3-GAMA.ipynb"
 JL_MANIFEST = REPO_ROOT / "notebooks_jl" / "envs" / "3-GAMA" / "Manifest.toml"
 NOTEBOOK_DATA_DIR = REPO_ROOT / "notebooks_data"
-COEFF_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_coefficients.csv"
-FEASIBLE_STARTS_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_feasible_starts.csv"
-GRAVER_ORDER_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_graver_order.csv"
+COEFF_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_example4_coefficients.csv"
+FEASIBLE_STARTS_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_example4_feasible_starts.csv"
+GRAVER_ORDER_FILE = NOTEBOOK_DATA_DIR / "3-GAMA_example4_graver_order.csv"
 
 
 def load_notebook(path: Path) -> dict[str, object]:
@@ -86,7 +86,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
                 "### Introduction to GAMA",
                 "### Introduction to Graver basis computation",
                 "## Problem statement",
-                "### Example",
+                "### Class examples",
+                "### Example 4: saved portfolio instance",
                 "### QUBO formulation for feasible starting points",
                 "### References",
             ],
@@ -101,7 +102,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
                 "### Introduction to GAMA",
                 "### Introduction to Graver basis computation",
                 "## Problem statement",
-                "### Example",
+                "### Class examples",
+                "### Example 4: saved portfolio instance",
                 "### QUBO formulation for feasible starting points",
                 "### References",
             ],
@@ -152,6 +154,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
         jl_markdown = notebook_markdown(JL_NOTEBOOK)
 
         for anchor in [
+            "Other class examples appear in the QUBO and Benchmarking notebooks.",
+            "The remaining GAMA method below uses this saved Example 4 instance",
             "First we would write this problem as an unconstrained one by penalizing the linear constraints as quadratics in the objective.",
             "Now we can highlight another feature of the algorithm, computing starting feasible solutions.",
             "We use simulated annealing here because the goal is not a single feasible point but a diverse set of feasible starts.",
@@ -177,16 +181,23 @@ class Notebook3PairSyncTests(unittest.TestCase):
         jl_markdown = notebook_markdown(JL_NOTEBOOK)
 
         for code_text in [py_code, jl_code]:
-            self.assertIn("3-GAMA_coefficients.csv", code_text)
-            self.assertIn("3-GAMA_feasible_starts.csv", code_text)
-            self.assertIn("3-GAMA_graver_order.csv", code_text)
+            self.assertIn("3-GAMA_example4_coefficients.csv", code_text)
+            self.assertIn("3-GAMA_example4_feasible_starts.csv", code_text)
+            self.assertIn("3-GAMA_example4_graver_order.csv", code_text)
+            self.assertNotIn('"3-GAMA_coefficients.csv"', code_text)
+            self.assertNotIn('"3-GAMA_feasible_starts.csv"', code_text)
+            self.assertNotIn('"3-GAMA_graver_order.csv"', code_text)
 
         for markdown in [py_markdown, jl_markdown]:
-            self.assertIn("saved instance", markdown)
+            self.assertIn("saved Example 4 instance", markdown)
             self.assertIn("reproducible", markdown)
             self.assertNotIn("directly comparable", markdown)
             self.assertNotIn("both notebooks load", markdown)
             self.assertNotIn("Python and Julia versions begin", markdown)
+            self.assertNotIn("Julia and Python versions begin", markdown)
+            self.assertNotIn("notebooks_data/3-GAMA_coefficients.csv", markdown)
+            self.assertNotIn("notebooks_data/3-GAMA_feasible_starts.csv", markdown)
+            self.assertNotIn("notebooks_data/3-GAMA_graver_order.csv", markdown)
 
         self.assertLess(
             py_code.index("def load_precomputed_feasible_starts"),
@@ -274,24 +285,35 @@ class Notebook3PairSyncTests(unittest.TestCase):
 
     def test_python_plotting_cells_use_shared_labels_and_log_axes(self) -> None:
         code_text = notebook_code(PY_NOTEBOOK)
+        markdown = notebook_markdown(PY_NOTEBOOK)
 
-        self.assertIn("Complete-basis greedy augmentation\\n({len(r)} Graver directions)", code_text)
-        self.assertIn("Partial-basis greedy augmentation\\n({n_draws} sampled Graver directions)", code_text)
+        self.assertIn("Complete-basis greedy ({len(r)} directions)", code_text)
+        self.assertIn("Partial-basis greedy ({n_draws} directions)", code_text)
+        self.assertNotIn("Complete-basis greedy augmentation\\n", code_text)
+        self.assertNotIn("Partial-basis greedy augmentation\\n", code_text)
         self.assertIn("plot_objective_gap_boxplot", code_text)
         self.assertIn("Objective gap to best full-basis result", code_text)
         self.assertIn("sample_labels = [f'{10 * i}% |G|' for i in range(1, N)]", code_text)
         self.assertIn("sample_labels.append('Complete basis')", code_text)
         self.assertIn("f'{t:.1e}'", code_text)
         self.assertIn("ax1.set_yscale('log')", code_text)
+        self.assertIn("This speed/quality tradeoff motivates the next experiment", markdown)
+        self.assertNotIn("...the time to do augmentation only having 10 choices is minimal", markdown)
 
     def test_julia_plot_helpers_capture_the_reviewed_experiment_labels(self) -> None:
         code_text = notebook_code(JL_NOTEBOOK)
+        markdown = notebook_markdown(JL_NOTEBOOK)
 
         self.assertIn('function plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Augmentation")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Complete-basis greedy augmentation\\n($(size(G, 1)) Graver directions)")', code_text)
-        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis greedy augmentation\\n($(num_partial_directions) sampled Graver directions)")', code_text)
+        self.assertIn('top_margin = 6mm', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_aug, I_aug; experiment_name = "Complete-basis greedy ($(size(G, 1)) directions)")', code_text)
+        self.assertIn('plot_augmentation(Y_feas, Y_paug, I_paug; experiment_name = "Partial-basis greedy ($(num_partial_directions) directions)")', code_text)
+        self.assertNotIn('Complete-basis greedy augmentation\\n', code_text)
+        self.assertNotIn('Partial-basis greedy augmentation\\n', code_text)
         self.assertIn('function plot_augmentation_runtime(T_aug, T_paug; partial_label = "10 sampled Graver directions")', code_text)
         self.assertIn('function log_ticks_for(values; include_zero_floor = nothing)', code_text)
+        self.assertIn("legend     = :topright", code_text)
+        self.assertNotIn("legend     = (0.75, 0.25)", code_text)
         self.assertIn('function plot_multiple_partial_augmentation(Y_feas, Y_mpaug, global_minimum)', code_text)
         self.assertIn('function lift_zero_gaps(Y, global_minimum)', code_text)
         self.assertIn('"$(10i)% |G|"', code_text)
@@ -301,6 +323,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
         self.assertIn('ylabel     = "Objective gap to best full-basis result"', code_text)
         self.assertIn('yticks     = (ticks, labels)', code_text)
         self.assertIn("yscale     = :log10", code_text)
+        self.assertIn("This speed/quality tradeoff motivates the next experiment", markdown)
+        self.assertNotIn("...the time to do augmentation only having 10 choices is minimal", markdown)
 
     def test_committed_julia_outputs_do_not_include_plot_label_errors(self) -> None:
         stderr = notebook_stderr(JL_NOTEBOOK)

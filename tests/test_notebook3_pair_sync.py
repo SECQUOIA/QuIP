@@ -221,6 +221,7 @@ class Notebook3PairSyncTests(unittest.TestCase):
             "Now we can highlight another feature of the algorithm, computing starting feasible solutions.",
             "We use simulated annealing here because the goal is not a single feasible point but a diverse set of feasible starts.",
             "The Graver basis of this matrix $A$ has 29789 elements",
+            "To switch among the class examples, change `SELECTED_GAMA_EXAMPLE`",
         ]:
             self.assertIn(anchor, py_markdown)
             self.assertIn(anchor, jl_markdown)
@@ -258,6 +259,42 @@ class Notebook3PairSyncTests(unittest.TestCase):
                 self.assertFalse(np.any(np.all(graver_directions == 0, axis=1)))
                 expected_kernel_products = np.zeros((A.shape[0], 5), dtype=int)
                 np.testing.assert_array_equal(A @ graver_directions.T, expected_kernel_products)
+
+    def test_restored_class_examples_are_selectable_in_code(self) -> None:
+        py_code = notebook_code(PY_NOTEBOOK)
+        jl_code = notebook_code(JL_NOTEBOOK)
+
+        for code_text in [py_code, jl_code]:
+            self.assertIn("SELECTED_GAMA_EXAMPLE = 4", code_text)
+            self.assertIn("load_gama_example", code_text)
+            self.assertIn("Example 1: illustrative Graver augmentation", code_text)
+            self.assertIn("Example 2: four-variable linear example", code_text)
+            self.assertIn("Example 3: alternate four-variable linear example", code_text)
+            self.assertIn("Example 4: saved portfolio instance", code_text)
+            self.assertIn("Using the documented x0 as the feasible start", code_text)
+            self.assertIn("Graver order, or the natural order for small examples", code_text)
+
+        for snippet in [
+            "if example_id == 1:",
+            "return np.sum(np.abs(x - 5))",
+            "return np.dot(c, x)",
+            "def graver_basis_for_selected_example() -> np.ndarray:",
+            'if SELECTED_GAMA_EXAMPLE != 4:',
+            "n_draws = min(10, r.shape[0])",
+        ]:
+            self.assertIn(snippet, py_code)
+
+        for snippet in [
+            "if example_id == 1",
+            "using LinearAlgebra",
+            "return sum(abs.(x .- 5))",
+            "return dot(c, x)",
+            "function graver_basis_for_selected_example(A)",
+            "if SELECTED_GAMA_EXAMPLE != 4",
+            "num_samples = min(num_samples, length(order), size(G, 1))",
+            "num_partial_directions = min(10, size(G, 1))",
+        ]:
+            self.assertIn(snippet, jl_code)
 
     def test_shared_example_data_files_have_expected_shapes(self) -> None:
         coeffs = np.loadtxt(COEFF_FILE, delimiter=",")
@@ -316,7 +353,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
 
         self.assertIn("function compute_graver_basis_local(A)", code_text)
         self.assertIn("function graver_basis(A)", code_text)
-        self.assertIn("G = graver_basis(A)", code_text)
+        self.assertIn("return graver_basis(A)", code_text)
+        self.assertIn("G = graver_basis_for_selected_example(A)", code_text)
         self.assertNotIn('write_mat("$(proj_path).lb"', code_text)
         self.assertNotIn('write_mat("$(proj_path).ub"', code_text)
 
@@ -372,8 +410,8 @@ class Notebook3PairSyncTests(unittest.TestCase):
         jl_code = notebook_code(JL_NOTEBOOK)
 
         self.assertIn("return -np.dot(mu, x)", py_code)
-        self.assertIn("f(x) = -μ'x +", jl_code)
-        self.assertNotIn("f(x) = μ'x +", jl_code)
+        self.assertIn("return -dot(μ, x)", jl_code)
+        self.assertNotIn("return dot(μ, x)", jl_code)
 
     def test_julia_markdown_avoids_literal_backslash_n_sequences(self) -> None:
         self.assertNotIn("\\n", notebook_markdown(JL_NOTEBOOK))

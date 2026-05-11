@@ -74,6 +74,10 @@ jobs:
         run: |
           uv run --group docs python -m unittest discover -s tests
 
+      - name: Run Colab Python runtime smoke
+        run: |
+          make verify-colab-python-runtime-smoke
+
       - name: Build Jupyter Book
         run: |
           uv run --group docs jupyter book build --html --ci
@@ -103,6 +107,10 @@ jobs:
         uses: julia-actions/setup-julia@v2
         with:
           version: "1.11.9"
+
+      - name: Run Colab Julia mismatch smoke
+        run: |
+          make verify-julia-colab-mismatch-smoke
 
       - name: Run Julia notebook smokes
         run: |

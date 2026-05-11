@@ -21,6 +21,10 @@ VERIFY_JULIA_SMOKES_PATH = Path(__file__).resolve().parents[1] / "scripts" / "ve
 VERIFY_NOTEBOOK5_JULIA_CACHE_SMOKE_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "verify_notebook5_julia_cache_smoke.jl"
 )
+BOOTSTRAP_PATH = Path(__file__).resolve().parents[1] / "scripts" / "notebook_bootstrap.jl"
+COLAB_RUNTIME_SMOKE_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "verify_colab_runtime_smokes.py"
+)
 
 
 class ParseExecutionTimeoutSecondsTests(unittest.TestCase):
@@ -119,6 +123,28 @@ class SetupJuliaTargetTests(unittest.TestCase):
         self.assertIn("./scripts/verify_notebook5_julia_cache_smoke.jl", body)
 
 
+class ColabRuntimeSmokeTests(unittest.TestCase):
+    def test_makefile_exposes_colab_runtime_smoke_targets(self) -> None:
+        makefile = MAKEFILE_PATH.read_text()
+
+        self.assertIn("verify-colab-runtime-smokes:", makefile)
+        self.assertIn("verify-colab-python-runtime-smoke:", makefile)
+        self.assertIn("verify-julia-colab-mismatch-smoke:", makefile)
+        self.assertIn("./scripts/verify_colab_runtime_smokes.py", makefile)
+
+    def test_smoke_script_covers_reported_colab_failures(self) -> None:
+        source = COLAB_RUNTIME_SMOKE_PATH.read_text()
+
+        self.assertIn("dwave-ocean-sdk", source)
+        self.assertIn("from dwave.samplers import SimulatedAnnealingSampler", source)
+        self.assertIn("COLAB_RELEASE_TAG", source)
+        self.assertIn("validate_project_julia_version!", source)
+        for project in ["1-MathProg", "2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking"]:
+            self.assertIn(f'"{project}"', source)
+        self.assertIn("Julia Colab mismatch policy ok for $(basename(project_dir))", source)
+        self.assertIn("Strict Colab mismatch validation unexpectedly passed", source)
+
+
 class JuliaSmokeScriptTests(unittest.TestCase):
     def test_smoke_script_loads_ijulia_via_core_eval_after_scripts_project(self) -> None:
         source = VERIFY_JULIA_SMOKES_PATH.read_text()
@@ -132,11 +158,24 @@ class JuliaSmokeScriptTests(unittest.TestCase):
         )
 
 
+class JuliaBootstrapColabMismatchTests(unittest.TestCase):
+    def test_colab_version_mismatch_defaults_to_re_resolve(self) -> None:
+        source = BOOTSTRAP_PATH.read_text()
+
+        self.assertIn("configured_allow_mismatch = env_bool(ALLOW_VERSION_MISMATCH_ENV)", source)
+        self.assertIn("something(configured_allow_mismatch, in_colab)", source)
+        self.assertIn("Colab will allow Pkg to re-resolve the notebook environment", source)
+        self.assertIn("Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.", source)
+        self.assertNotIn("Restart the notebook with Julia", source)
+
+
 class WorkflowCoverageTests(unittest.TestCase):
     def test_workflow_runs_julia_notebook_smokes(self) -> None:
         workflow = WORKFLOW_PATH.read_text()
 
         self.assertIn("julia-notebook-smokes:", workflow)
+        self.assertIn("make verify-colab-python-runtime-smoke", workflow)
+        self.assertIn("make verify-julia-colab-mismatch-smoke", workflow)
         self.assertIn("make verify-julia-colab-smokes COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking", workflow)
         self.assertIn("make verify-julia-notebook5-cache-smoke", workflow)
 
@@ -189,6 +228,12 @@ class JuliaVersionSelectionTests(unittest.TestCase):
         self.assertIn("juliaup add 1.11.9", local_setup)
         self.assertIn("COLAB_JULIA_VERSION=1.11.9", local_setup)
         self.assertIn(".julia-colab-depot", local_setup)
+        self.assertIn("make verify-colab-runtime-smokes", local_setup)
+        self.assertIn("make verify-colab-python-runtime-smoke", local_setup)
+        self.assertIn("make verify-julia-colab-mismatch-smoke", local_setup)
+        self.assertIn("`1-MathProg`, `2-QUBO`, `3-GAMA`, `4-DWave`, and `5-Benchmarking`", local_setup)
+        self.assertIn("QUIP_ALLOW_JULIA_VERSION_MISMATCH=0", local_setup)
+        self.assertIn("COLAB_RELEASE_TAG=local-test", local_setup)
 
 
 if __name__ == "__main__":

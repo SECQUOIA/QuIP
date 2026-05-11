@@ -1,5 +1,6 @@
-.PHONY: setup-julia sysimage verify-notebooks verify-mathprog verify-qubo-python verify-julia-colab verify-julia-colab-notebooks verify-julia-colab-smokes verify-julia-notebook5-cache-smoke install-julia-colab-hook
+.PHONY: setup-julia sysimage verify-notebooks verify-mathprog verify-qubo-python verify-colab-runtime-smokes verify-colab-python-runtime-smoke verify-julia-colab verify-julia-colab-notebooks verify-julia-colab-smokes verify-julia-colab-mismatch-smoke verify-julia-notebook5-cache-smoke install-julia-colab-hook
 
+PYTHON ?= python3
 UV ?= uv
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
 UV_GROUP_FLAGS ?= --group docs --group mathprog
@@ -18,6 +19,7 @@ COLAB_JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-colab-depot:$(JULIA_HOME_DEPOT)
 COLAB_UV_GROUP_FLAGS ?= --group docs --group mathprog --group qubo
 COLAB_JULIA_NOTEBOOKS ?= notebooks_jl/1-MathProg.ipynb notebooks_jl/2-QUBO.ipynb
 COLAB_JULIA_SMOKE_NOTEBOOKS ?= 3-GAMA 4-DWave 5-Benchmarking
+COLAB_RUNTIME_SMOKE_FLAGS ?=
 
 NOTEBOOK ?= notebooks_jl/1-MathProg.ipynb
 SYSIMAGE_NOTEBOOK ?=
@@ -43,6 +45,12 @@ verify-mathprog:
 verify-qubo-python:
 	$(MAKE) verify-notebooks UV_GROUP_FLAGS="--group docs --group qubo" NOTEBOOKS="notebooks_py/2-QUBO_python.ipynb"
 
+verify-colab-runtime-smokes:
+	$(PYTHON) ./scripts/verify_colab_runtime_smokes.py $(COLAB_RUNTIME_SMOKE_FLAGS)
+
+verify-colab-python-runtime-smoke:
+	$(PYTHON) ./scripts/verify_colab_runtime_smokes.py --skip-julia
+
 verify-julia-colab:
 	$(MAKE) verify-julia-colab-notebooks
 	$(MAKE) verify-julia-colab-smokes
@@ -55,6 +63,9 @@ verify-julia-colab-notebooks:
 verify-julia-colab-smokes:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)
 	JULIA_BIN=$(COLAB_JULIA) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(COLAB_JULIA) --project=./scripts ./scripts/verify_julia_env_smokes.jl $(COLAB_JULIA_SMOKE_NOTEBOOKS)
+
+verify-julia-colab-mismatch-smoke:
+	$(PYTHON) ./scripts/verify_colab_runtime_smokes.py --skip-python $(COLAB_RUNTIME_SMOKE_FLAGS)
 
 verify-julia-notebook5-cache-smoke:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)

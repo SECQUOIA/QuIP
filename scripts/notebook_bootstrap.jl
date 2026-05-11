@@ -182,14 +182,17 @@ function validate_project_julia_version!(project_dir::AbstractString; in_colab::
     manifest_version === nothing && return nothing
     manifest_version == VERSION && return nothing
 
-    allow_mismatch = something(env_bool(ALLOW_VERSION_MISMATCH_ENV), false)
+    configured_allow_mismatch = env_bool(ALLOW_VERSION_MISMATCH_ENV)
+    allow_mismatch = something(configured_allow_mismatch, in_colab)
     message = "The Julia manifest at $(manifest_path(project_dir)) targets Julia $(manifest_version), but the current kernel is Julia $(VERSION)."
 
     if in_colab && !allow_mismatch
-        error(message * " Restart the notebook with Julia $(manifest_version) or set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.")
+        error(message * " Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.")
     end
 
-    @warn message * " Continuing because $(ALLOW_VERSION_MISMATCH_ENV)=1 or Colab mode is disabled."
+    reason = in_colab ? "Colab will allow Pkg to re-resolve the notebook environment" : "Colab mode is disabled"
+    configured_allow_mismatch === true && (reason = "$(ALLOW_VERSION_MISMATCH_ENV)=1")
+    @warn message * " Continuing because $reason."
     return nothing
 end
 

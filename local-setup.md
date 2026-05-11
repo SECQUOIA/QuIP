@@ -68,12 +68,25 @@ The built site will be written to `_build/html/index.html`.
    ```bash
    make verify-mathprog
    make verify-qubo-python
+   make verify-colab-runtime-smokes
    ```
 
    `make verify-mathprog` executes the Python and Julia math programming
    notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
    executes the Python QUBO notebook. Both write the executed copies to
-   `.nbverify/`.
+   `.nbverify/`. `make verify-colab-runtime-smokes` runs focused checks for
+   Colab-only failure modes without opening a hosted Colab session: a temporary
+   Python environment installs only `dwave-ocean-sdk` and imports the local
+   simulated annealer from `dwave.samplers`, and a Julia smoke validates that
+   manifest/runtime version mismatches warn and continue in Colab mode for
+   `1-MathProg`, `2-QUBO`, `3-GAMA`, `4-DWave`, and `5-Benchmarking`. To run
+   those checks separately, use:
+
+   ```bash
+   make verify-colab-python-runtime-smoke
+   make verify-julia-colab-mismatch-smoke
+   ```
+
    The Julia notebook checks now resolve the Julia patch version from each
    notebook manifest. At the moment that means installing both Julia `1.11.5`
    and Julia `1.11.9` once with `juliaup add 1.11.5` and `juliaup add 1.11.9`.
@@ -121,10 +134,20 @@ The built site will be written to `_build/html/index.html`.
    make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot"
    ```
 
-   The Colab bootstrap now validates the running Julia patch version against the
-   checked-in manifest before instantiating packages. If you intentionally want
-   to allow a mismatch and accept a slower `Pkg` re-resolve, set
-   `QUIP_ALLOW_JULIA_VERSION_MISMATCH=1` before launching the notebook.
+   The Colab bootstrap logs the checked-in Julia manifest version before
+   instantiating packages. If Colab's hosted Julia runtime has moved past that
+   patch version, the notebook continues and allows `Pkg` to re-resolve the
+   environment. Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the
+   notebook when you intentionally want a strict version check.
+
+   To locally exercise the Colab mismatch path without launching Colab, run:
+
+   ```bash
+   make verify-julia-colab-mismatch-smoke
+   ```
+
+   That target sets `COLAB_RELEASE_TAG=local-test` internally and validates the
+   Colab mismatch policy against all Julia Colab notebook project manifests.
 
    If you need the Colab bootstrap to clone a non-default QuIP ref, set
    `QUIP_REPO_REF=<branch-tag-or-40-char-commit>` before running the first

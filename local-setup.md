@@ -68,12 +68,24 @@ The built site will be written to `_build/html/index.html`.
    ```bash
    make verify-mathprog
    make verify-qubo-python
+   make verify-colab-runtime-smokes
    ```
 
    `make verify-mathprog` executes the Python and Julia math programming
    notebooks through `jupyter nbconvert`, while `make verify-qubo-python`
    executes the Python QUBO notebook. Both write the executed copies to
-   `.nbverify/`.
+   `.nbverify/`. `make verify-colab-runtime-smokes` runs focused checks for
+   Colab-only failure modes without opening a hosted Colab session: a temporary
+   Python environment installs only `dwave-ocean-sdk` and imports the local
+   simulated annealer from `dwave.samplers`, and a Julia smoke validates that a
+   manifest/runtime version mismatch warns and continues in Colab mode. To run
+   those checks separately, use:
+
+   ```bash
+   make verify-colab-python-runtime-smoke
+   make verify-julia-colab-mismatch-smoke
+   ```
+
    The Julia notebook checks now resolve the Julia patch version from each
    notebook manifest. At the moment that means installing both Julia `1.11.5`
    and Julia `1.11.9` once with `juliaup add 1.11.5` and `juliaup add 1.11.9`.

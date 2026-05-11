@@ -21,6 +21,7 @@ VERIFY_JULIA_SMOKES_PATH = Path(__file__).resolve().parents[1] / "scripts" / "ve
 VERIFY_NOTEBOOK5_JULIA_CACHE_SMOKE_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "verify_notebook5_julia_cache_smoke.jl"
 )
+BOOTSTRAP_PATH = Path(__file__).resolve().parents[1] / "scripts" / "notebook_bootstrap.jl"
 
 
 class ParseExecutionTimeoutSecondsTests(unittest.TestCase):
@@ -132,6 +133,17 @@ class JuliaSmokeScriptTests(unittest.TestCase):
         )
 
 
+class JuliaBootstrapColabMismatchTests(unittest.TestCase):
+    def test_colab_version_mismatch_defaults_to_re_resolve(self) -> None:
+        source = BOOTSTRAP_PATH.read_text()
+
+        self.assertIn("configured_allow_mismatch = env_bool(ALLOW_VERSION_MISMATCH_ENV)", source)
+        self.assertIn("something(configured_allow_mismatch, in_colab)", source)
+        self.assertIn("Colab will allow Pkg to re-resolve the notebook environment", source)
+        self.assertIn("Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.", source)
+        self.assertNotIn("Restart the notebook with Julia", source)
+
+
 class WorkflowCoverageTests(unittest.TestCase):
     def test_workflow_runs_julia_notebook_smokes(self) -> None:
         workflow = WORKFLOW_PATH.read_text()
@@ -189,6 +201,8 @@ class JuliaVersionSelectionTests(unittest.TestCase):
         self.assertIn("juliaup add 1.11.9", local_setup)
         self.assertIn("COLAB_JULIA_VERSION=1.11.9", local_setup)
         self.assertIn(".julia-colab-depot", local_setup)
+        self.assertIn("QUIP_ALLOW_JULIA_VERSION_MISMATCH=0", local_setup)
+        self.assertIn("COLAB_RELEASE_TAG=local-test", local_setup)
 
 
 if __name__ == "__main__":

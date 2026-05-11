@@ -150,11 +150,19 @@ class Notebook4PairSyncTests(unittest.TestCase):
             self.assertIn(shared_reference, python_markdown)
             self.assertIn(shared_reference, julia_markdown)
         self.assertIn("dimod", python_markdown)
-        self.assertIn("dwave-neal", python_markdown)
+        self.assertIn("dwave-samplers", python_markdown)
         self.assertIn("NetworkX", python_markdown)
         self.assertIn("DWave.jl", julia_markdown)
         self.assertIn("JuMP", julia_markdown)
         self.assertIn("Graphs.jl", julia_markdown)
+
+    def test_python_notebook_uses_current_dwave_sampler_import(self) -> None:
+        code_text = notebook_code(PY_NOTEBOOK)
+
+        self.assertIn("from dwave.samplers import SimulatedAnnealingSampler", code_text)
+        self.assertIn("simAnnSampler = SimulatedAnnealingSampler()", code_text)
+        self.assertNotIn("import neal", code_text)
+        self.assertNotIn("neal.SimulatedAnnealingSampler()", code_text)
 
     def test_julia_metadata_matches_the_committed_manifest(self) -> None:
         notebook = load_notebook(JL_NOTEBOOK)

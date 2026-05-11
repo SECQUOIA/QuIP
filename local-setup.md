@@ -121,10 +121,20 @@ The built site will be written to `_build/html/index.html`.
    make verify-julia-colab COLAB_JULIA_DEPOT_PATH="$PWD/.julia-colab-depot"
    ```
 
-   The Colab bootstrap now validates the running Julia patch version against the
-   checked-in manifest before instantiating packages. If you intentionally want
-   to allow a mismatch and accept a slower `Pkg` re-resolve, set
-   `QUIP_ALLOW_JULIA_VERSION_MISMATCH=1` before launching the notebook.
+   The Colab bootstrap logs the checked-in Julia manifest version before
+   instantiating packages. If Colab's hosted Julia runtime has moved past that
+   patch version, the notebook continues and allows `Pkg` to re-resolve the
+   environment. Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the
+   notebook when you intentionally want a strict version check.
+
+   To locally exercise the Colab mismatch path without launching Colab, set a
+   Colab detection variable and run the bootstrap validation with a different
+   Julia binary:
+
+   ```bash
+   COLAB_JULIA="$(JULIA_VERSION=1.12 ./scripts/find_julia.sh)"
+   COLAB_RELEASE_TAG=local-test "$COLAB_JULIA" --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.validate_project_julia_version!("notebooks_jl/envs/3-GAMA"; in_colab=true)'
+   ```
 
    If you need the Colab bootstrap to clone a non-default QuIP ref, set
    `QUIP_REPO_REF=<branch-tag-or-40-char-commit>` before running the first

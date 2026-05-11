@@ -79,7 +79,8 @@ The built site will be written to `_build/html/index.html`.
    Python environment installs only `dwave-ocean-sdk` and imports the local
    simulated annealer from `dwave.samplers`, and a Julia smoke validates that
    manifest/runtime version mismatches warn and continue in Colab mode for
-   `1-MathProg`, `3-GAMA`, and `4-DWave`. To run those checks separately, use:
+   `1-MathProg`, `2-QUBO`, `3-GAMA`, `4-DWave`, and `5-Benchmarking`. To run
+   those checks separately, use:
 
    ```bash
    make verify-colab-python-runtime-smoke
@@ -139,14 +140,14 @@ The built site will be written to `_build/html/index.html`.
    environment. Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the
    notebook when you intentionally want a strict version check.
 
-   To locally exercise the Colab mismatch path without launching Colab, set a
-   Colab detection variable and run the bootstrap validation with a different
-   Julia binary:
+   To locally exercise the Colab mismatch path without launching Colab, run:
 
    ```bash
-   COLAB_JULIA="$(JULIA_VERSION=1.12 ./scripts/find_julia.sh)"
-   COLAB_RELEASE_TAG=local-test "$COLAB_JULIA" --project=./scripts -e 'include("./scripts/notebook_bootstrap.jl"); using .QuIPNotebookBootstrap; QuIPNotebookBootstrap.validate_project_julia_version!("notebooks_jl/envs/3-GAMA"; in_colab=true)'
+   make verify-julia-colab-mismatch-smoke
    ```
+
+   That target sets `COLAB_RELEASE_TAG=local-test` internally and validates the
+   Colab mismatch policy against all Julia Colab notebook project manifests.
 
    If you need the Colab bootstrap to clone a non-default QuIP ref, set
    `QUIP_REPO_REF=<branch-tag-or-40-char-commit>` before running the first

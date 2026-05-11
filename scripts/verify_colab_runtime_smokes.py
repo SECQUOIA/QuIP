@@ -14,7 +14,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
 ALLOW_VERSION_MISMATCH_ENV = "QUIP_ALLOW_JULIA_VERSION_MISMATCH"
-DEFAULT_JULIA_NOTEBOOK_PROJECTS = ("1-MathProg", "3-GAMA", "4-DWave")
+DEFAULT_JULIA_NOTEBOOK_PROJECTS = (
+    "1-MathProg",
+    "2-QUBO",
+    "3-GAMA",
+    "4-DWave",
+    "5-Benchmarking",
+)
 
 
 def format_cmd(cmd: list[str]) -> str:
@@ -178,7 +184,7 @@ def parse_args() -> argparse.Namespace:
         choices=DEFAULT_JULIA_NOTEBOOK_PROJECTS,
         help=(
             "Notebook project env to validate in Colab mode. "
-            "May be passed multiple times; defaults to 1-MathProg, 3-GAMA, and 4-DWave."
+            "May be passed multiple times; defaults to all Julia Colab notebook projects."
         ),
     )
     return parser.parse_args()

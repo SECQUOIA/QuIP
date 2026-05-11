@@ -77,9 +77,9 @@ The built site will be written to `_build/html/index.html`.
    `.nbverify/`. `make verify-colab-runtime-smokes` runs focused checks for
    Colab-only failure modes without opening a hosted Colab session: a temporary
    Python environment installs only `dwave-ocean-sdk` and imports the local
-   simulated annealer from `dwave.samplers`, and a Julia smoke validates that a
-   manifest/runtime version mismatch warns and continues in Colab mode. To run
-   those checks separately, use:
+   simulated annealer from `dwave.samplers`, and a Julia smoke validates that
+   manifest/runtime version mismatches warn and continue in Colab mode for
+   `1-MathProg`, `3-GAMA`, and `4-DWave`. To run those checks separately, use:
 
    ```bash
    make verify-colab-python-runtime-smoke

@@ -139,6 +139,8 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
         self.assertIn("from dwave.samplers import SimulatedAnnealingSampler", source)
         self.assertIn("COLAB_RELEASE_TAG", source)
         self.assertIn("validate_project_julia_version!", source)
+        self.assertIn('DEFAULT_JULIA_NOTEBOOK_PROJECTS = ("1-MathProg", "3-GAMA", "4-DWave")', source)
+        self.assertIn("Julia Colab mismatch policy ok for $(basename(project_dir))", source)
         self.assertIn("Strict Colab mismatch validation unexpectedly passed", source)
 
 
@@ -228,6 +230,7 @@ class JuliaVersionSelectionTests(unittest.TestCase):
         self.assertIn("make verify-colab-runtime-smokes", local_setup)
         self.assertIn("make verify-colab-python-runtime-smoke", local_setup)
         self.assertIn("make verify-julia-colab-mismatch-smoke", local_setup)
+        self.assertIn("`1-MathProg`, `3-GAMA`, and `4-DWave`", local_setup)
         self.assertIn("QUIP_ALLOW_JULIA_VERSION_MISMATCH=0", local_setup)
         self.assertIn("COLAB_RELEASE_TAG=local-test", local_setup)
 

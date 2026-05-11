@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
 ALLOW_VERSION_MISMATCH_ENV = "QUIP_ALLOW_JULIA_VERSION_MISMATCH"
+DEFAULT_JULIA_NOTEBOOK_PROJECTS = ("1-MathProg", "3-GAMA", "4-DWave")
 
 
 def format_cmd(cmd: list[str]) -> str:
@@ -86,8 +87,29 @@ def run_julia_colab_mismatch_smoke(
     *,
     julia_executable: str | None,
     julia_version: str | None,
+    notebook_projects: tuple[str, ...],
 ) -> None:
     julia = find_julia_executable(julia_executable, julia_version)
+    notebook_project_args = [
+        str(REPO_ROOT / "notebooks_jl" / "envs" / project)
+        for project in notebook_projects
+    ]
+    real_project_code = "\n".join(
+        [
+            'include("./scripts/notebook_bootstrap.jl")',
+            "using .QuIPNotebookBootstrap",
+            f'delete!(ENV, "{ALLOW_VERSION_MISMATCH_ENV}")',
+            "for project_dir in ARGS",
+            "    QuIPNotebookBootstrap.validate_project_julia_version!(project_dir; in_colab = true)",
+            '    println("Julia Colab mismatch policy ok for $(basename(project_dir))")',
+            "end",
+        ]
+    )
+
+    env = os.environ.copy()
+    env["COLAB_RELEASE_TAG"] = "local-test"
+    run([julia, "--project=./scripts", "-e", real_project_code, *notebook_project_args], env=env)
+
     with tempfile.TemporaryDirectory(prefix="quip-colab-julia-") as tmp:
         project_dir = Path(tmp) / "Project"
         project_dir.mkdir()
@@ -117,8 +139,6 @@ def run_julia_colab_mismatch_smoke(
             ]
         )
 
-        env = os.environ.copy()
-        env["COLAB_RELEASE_TAG"] = "local-test"
         run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=env)
 
 
@@ -151,6 +171,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip the Julia Colab mismatch smoke.",
     )
+    parser.add_argument(
+        "--julia-notebook-project",
+        action="append",
+        dest="julia_notebook_projects",
+        choices=DEFAULT_JULIA_NOTEBOOK_PROJECTS,
+        help=(
+            "Notebook project env to validate in Colab mode. "
+            "May be passed multiple times; defaults to 1-MathProg, 3-GAMA, and 4-DWave."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -166,6 +196,7 @@ def main() -> int:
         run_julia_colab_mismatch_smoke(
             julia_executable=args.julia,
             julia_version=args.julia_version,
+            notebook_projects=tuple(args.julia_notebook_projects or DEFAULT_JULIA_NOTEBOOK_PROJECTS),
         )
 
     return 0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import importlib.util
 import os
 import re
@@ -25,6 +26,26 @@ BOOTSTRAP_PATH = Path(__file__).resolve().parents[1] / "scripts" / "notebook_boo
 COLAB_RUNTIME_SMOKE_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "verify_colab_runtime_smokes.py"
 )
+QCI_NOTEBOOK_PATH = Path(__file__).resolve().parents[1] / "notebooks_py" / "6-QCi_python.ipynb"
+JULIA_NOTEBOOKS = (
+    ("1-MathProg", Path(__file__).resolve().parents[1] / "notebooks_jl" / "1-MathProg.ipynb"),
+    ("2-QUBO", Path(__file__).resolve().parents[1] / "notebooks_jl" / "2-QUBO.ipynb"),
+    ("3-GAMA", Path(__file__).resolve().parents[1] / "notebooks_jl" / "3-GAMA.ipynb"),
+    ("4-DWave", Path(__file__).resolve().parents[1] / "notebooks_jl" / "4-DWave.ipynb"),
+    (
+        "5-Benchmarking",
+        Path(__file__).resolve().parents[1] / "notebooks_jl" / "5-Benchmarking.ipynb",
+    ),
+)
+
+
+def notebook_code(path: Path) -> str:
+    notebook = json.loads(path.read_text())
+    return "\n".join(
+        "".join(cell.get("source", []))
+        for cell in notebook["cells"]
+        if cell.get("cell_type") == "code"
+    )
 
 
 class ParseExecutionTimeoutSecondsTests(unittest.TestCase):
@@ -137,6 +158,11 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
 
         self.assertIn("dwave-ocean-sdk", source)
         self.assertIn("from dwave.samplers import SimulatedAnnealingSampler", source)
+        self.assertIn("run_python_qci_setup_smoke", source)
+        self.assertIn("eqc-models==0.19.0", source)
+        self.assertIn("numpy>=1.26,<2", source)
+        self.assertIn("networkx>=2.8,<3", source)
+        self.assertIn("os.kill(os.getpid(), 9)", source)
         self.assertIn("COLAB_RELEASE_TAG", source)
         self.assertIn("validate_project_julia_version!", source)
         for project in ["1-MathProg", "2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking"]:
@@ -165,8 +191,42 @@ class JuliaBootstrapColabMismatchTests(unittest.TestCase):
         self.assertIn("configured_allow_mismatch = env_bool(ALLOW_VERSION_MISMATCH_ENV)", source)
         self.assertIn("something(configured_allow_mismatch, in_colab)", source)
         self.assertIn("Colab will allow Pkg to re-resolve the notebook environment", source)
+        self.assertIn("should_resolve_project_for_current_julia", source)
+        self.assertIn("Resolving Julia packages for current runtime Julia", source)
+        self.assertIn("Pkg.resolve()", source)
         self.assertIn("Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.", source)
         self.assertNotIn("Restart the notebook with Julia", source)
+
+
+class ColabNotebookSourceTests(unittest.TestCase):
+    def test_julia_notebook_bootstrap_uses_invokelatest(self) -> None:
+        for project, path in JULIA_NOTEBOOKS:
+            source = notebook_code(path)
+
+            self.assertIn(
+                f'Base.invokelatest(QuIPNotebookBootstrap.bootstrap_notebook, "{project}")',
+                source,
+            )
+            self.assertNotIn(
+                f'QuIPNotebookBootstrap.bootstrap_notebook("{project}")',
+                source,
+            )
+
+    def test_qci_colab_setup_is_constrained_and_restart_aware(self) -> None:
+        source = notebook_code(QCI_NOTEBOOK_PATH)
+
+        for expected in [
+            "eqc-models==0.19.0",
+            "numpy>=1.26,<2",
+            "networkx>=2.8,<3",
+            "QCI_RUNTIME_READY.touch()",
+            "os.kill(os.getpid(), 9)",
+            'subprocess.check_call(["idaes", "get-extensions", "--to", "./bin"])',
+        ]:
+            self.assertIn(expected, source)
+
+        self.assertNotIn("!pip install eqc_models pyomo", source)
+        self.assertNotIn("!pip install idaes-pse --pre", source)
 
 
 class WorkflowCoverageTests(unittest.TestCase):

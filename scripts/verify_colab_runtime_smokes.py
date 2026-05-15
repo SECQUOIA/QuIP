@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIND_JULIA_SCRIPT = REPO_ROOT / "scripts" / "find_julia.sh"
+QCI_NOTEBOOK = REPO_ROOT / "notebooks_py" / "6-QCi_python.ipynb"
 ALLOW_VERSION_MISMATCH_ENV = "QUIP_ALLOW_JULIA_VERSION_MISMATCH"
 DEFAULT_JULIA_NOTEBOOK_PROJECTS = (
     "1-MathProg",
@@ -51,6 +53,15 @@ def venv_python(venv_dir: Path) -> Path:
     return venv_dir / "bin" / "python"
 
 
+def notebook_code(path: Path) -> str:
+    notebook = json.loads(path.read_text(encoding="utf-8"))
+    return "\n".join(
+        "".join(cell.get("source", []))
+        for cell in notebook["cells"]
+        if cell.get("cell_type") == "code"
+    )
+
+
 def run_python_ocean_smoke(python_executable: str) -> None:
     with tempfile.TemporaryDirectory(prefix="quip-colab-ocean-") as tmp:
         venv_dir = Path(tmp) / "venv"
@@ -75,6 +86,36 @@ def run_python_ocean_smoke(python_executable: str) -> None:
                 ),
             ]
         )
+
+
+def run_python_qci_setup_smoke() -> None:
+    source = notebook_code(QCI_NOTEBOOK)
+    required_snippets = (
+        "eqc-models==0.19.0",
+        "numpy>=1.26,<2",
+        "networkx>=2.8,<3",
+        "QCI_RUNTIME_READY.touch()",
+        "os.kill(os.getpid(), 9)",
+        'subprocess.check_call(["idaes", "get-extensions", "--to", "./bin"])',
+    )
+    forbidden_snippets = (
+        "!pip install eqc_models pyomo",
+        "!pip install idaes-pse --pre",
+    )
+
+    missing = [snippet for snippet in required_snippets if snippet not in source]
+    if missing:
+        raise AssertionError(
+            "QCI Colab setup is missing expected snippets: " + ", ".join(missing)
+        )
+
+    present = [snippet for snippet in forbidden_snippets if snippet in source]
+    if present:
+        raise AssertionError(
+            "QCI Colab setup still contains unsafe install snippets: " + ", ".join(present)
+        )
+
+    print("QCI Colab setup policy ok")
 
 
 def find_julia_executable(julia_executable: str | None, julia_version: str | None) -> str:
@@ -197,6 +238,7 @@ def main() -> int:
 
     if not args.skip_python:
         run_python_ocean_smoke(args.python)
+        run_python_qci_setup_smoke()
 
     if not args.skip_julia:
         run_julia_colab_mismatch_smoke(

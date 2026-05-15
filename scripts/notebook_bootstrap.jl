@@ -196,6 +196,11 @@ function validate_project_julia_version!(project_dir::AbstractString; in_colab::
     return nothing
 end
 
+function should_resolve_project_for_current_julia(project_dir::AbstractString; in_colab::Bool = detect_colab())
+    manifest_version = manifest_julia_version(project_dir)
+    return in_colab && manifest_version !== nothing && manifest_version != VERSION
+end
+
 function candidate_repo_dirs(; cwd::AbstractString = pwd())
     return unique((
         normpath(cwd),
@@ -288,6 +293,10 @@ end
 
 function instantiate_project!(project_dir::AbstractString; precompile::Bool = true)
     activate_project!(project_dir)
+    if should_resolve_project_for_current_julia(project_dir)
+        log_step("Resolving Julia packages for current runtime Julia $(VERSION)")
+        Pkg.resolve()
+    end
     log_step("Instantiating Julia packages")
     @time Pkg.instantiate()
     if precompile

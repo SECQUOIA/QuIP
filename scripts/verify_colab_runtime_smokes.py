@@ -94,7 +94,6 @@ def run_python_qci_setup_smoke() -> None:
         "eqc-models==0.19.0",
         "numpy>=1.26,<2",
         "networkx>=2.8,<3",
-        "QCI_RUNTIME_READY.touch()",
         "os.kill(os.getpid(), 9)",
         'subprocess.check_call(["idaes", "get-extensions", "--to", "./bin"])',
     )

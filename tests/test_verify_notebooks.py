@@ -219,12 +219,12 @@ class ColabNotebookSourceTests(unittest.TestCase):
             "eqc-models==0.19.0",
             "numpy>=1.26,<2",
             "networkx>=2.8,<3",
-            "QCI_RUNTIME_READY.touch()",
             "os.kill(os.getpid(), 9)",
             'subprocess.check_call(["idaes", "get-extensions", "--to", "./bin"])',
         ]:
             self.assertIn(expected, source)
 
+        self.assertNotIn("QCI_RUNTIME_READY", source)
         self.assertNotIn("!pip install eqc_models pyomo", source)
         self.assertNotIn("!pip install idaes-pse --pre", source)
 

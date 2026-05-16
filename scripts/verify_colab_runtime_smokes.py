@@ -129,6 +129,43 @@ def find_julia_executable(julia_executable: str | None, julia_version: str | Non
     return result.stdout.strip()
 
 
+def run_julia_colab_resolve_smoke(julia: str, env: dict[str, str]) -> None:
+    with tempfile.TemporaryDirectory(prefix="quip-colab-julia-resolve-") as tmp:
+        smoke_env = env.copy()
+        depot_path = smoke_env.get("JULIA_DEPOT_PATH")
+        smoke_env["JULIA_DEPOT_PATH"] = os.pathsep.join(
+            [
+                str(Path(tmp) / "depot"),
+                depot_path if depot_path else str(Path.home() / ".julia"),
+                "",
+            ]
+        )
+        project_dir = Path(tmp) / "Project"
+        project_dir.mkdir()
+        (project_dir / "Project.toml").write_text("[deps]\n", encoding="utf-8")
+        (project_dir / "Manifest.toml").write_text(
+            'julia_version = "0.0.0"\nmanifest_format = "2.0"\n',
+            encoding="utf-8",
+        )
+
+        code = "\n".join(
+            [
+                'include("./scripts/notebook_bootstrap.jl")',
+                "using .QuIPNotebookBootstrap",
+                "project_dir = ARGS[1]",
+                f'delete!(ENV, "{ALLOW_VERSION_MISMATCH_ENV}")',
+                "QuIPNotebookBootstrap.instantiate_project!(project_dir; precompile = false)",
+                "manifest_version = QuIPNotebookBootstrap.manifest_julia_version(project_dir)",
+                "if manifest_version != VERSION",
+                '    error("Expected resolve smoke manifest Julia version $(VERSION), got $(manifest_version)")',
+                "end",
+                'println("Julia Colab resolve smoke ok")',
+            ]
+        )
+
+        run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=smoke_env)
+
+
 def run_julia_colab_mismatch_smoke(
     *,
     julia_executable: str | None,
@@ -186,6 +223,8 @@ def run_julia_colab_mismatch_smoke(
         )
 
         run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=env)
+
+    run_julia_colab_resolve_smoke(julia, env)
 
 
 def parse_args() -> argparse.Namespace:

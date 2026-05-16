@@ -169,6 +169,10 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
             self.assertIn(f'"{project}"', source)
         self.assertIn("Julia Colab mismatch policy ok for $(basename(project_dir))", source)
         self.assertIn("Strict Colab mismatch validation unexpectedly passed", source)
+        self.assertIn("run_julia_colab_resolve_smoke", source)
+        self.assertIn("instantiate_project!(project_dir; precompile = false)", source)
+        self.assertIn("manifest_julia_version(project_dir)", source)
+        self.assertIn("Julia Colab resolve smoke ok", source)
 
 
 class JuliaSmokeScriptTests(unittest.TestCase):

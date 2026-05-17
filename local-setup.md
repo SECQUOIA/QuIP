@@ -105,8 +105,10 @@ The built site will be written to `_build/html/index.html`.
    ```
 
    To approximate the current Google Colab Julia runtimes locally, first
-   install both Julia `1.11.5` and Julia `1.11.9` once with `juliaup add
-   1.11.5` and `juliaup add 1.11.9`, then run the Colab-style Julia check:
+   install Julia `1.11.5`, Julia `1.11.9`, and the current Colab mismatch
+   smoke version, Julia `1.12.6`, once with `juliaup add 1.11.5`,
+   `juliaup add 1.11.9`, and `juliaup add 1.12.6`, then run the
+   Colab-style Julia check:
 
    ```bash
    make verify-julia-colab
@@ -119,7 +121,9 @@ The built site will be written to `_build/html/index.html`.
    to a compatible binary on the command line, the smoke targets will reuse
    that binary unless you override `COLAB_JULIA` explicitly. You can also pick
    a specific juliaup toolchain for the smoke targets with
-   `COLAB_JULIA_VERSION=1.11.9`.
+   `COLAB_JULIA_VERSION=1.11.9`. The mismatch smoke uses
+   `COLAB_MISMATCH_JULIA_VERSION=1.12.6` by default so it continues to cover
+   hosted Colab kernels that have moved past the checked-in notebook manifests.
    This target writes Julia state into `.julia-colab-depot`, reuses registries
    and cached packages from `~/.julia` when available, executes the Julia math
    programming and QUBO notebooks end to end, and runs import/bootstrap smokes
@@ -137,8 +141,11 @@ The built site will be written to `_build/html/index.html`.
    The Colab bootstrap logs the checked-in Julia manifest version before
    instantiating packages. If Colab's hosted Julia runtime has moved past that
    patch version, the notebook continues and allows `Pkg` to re-resolve the
-   environment. Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the
-   notebook when you intentionally want a strict version check.
+   environment. If the stale manifest contains a transitive package pin that
+   cannot be resolved for the hosted Julia runtime, the Colab bootstrap falls
+   back to updating the notebook environment in that temporary Colab session.
+   Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the notebook when
+   you intentionally want a strict version check.
 
    To locally exercise the Colab mismatch path without launching Colab, run:
 

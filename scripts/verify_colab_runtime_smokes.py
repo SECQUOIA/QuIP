@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import shlex
 import subprocess
 import sys
@@ -23,6 +24,7 @@ DEFAULT_JULIA_NOTEBOOK_PROJECTS = (
     "4-DWave",
     "5-Benchmarking",
 )
+DEFAULT_JULIA_INSTANTIATE_PROJECTS = ("3-GAMA",)
 
 
 def format_cmd(cmd: list[str]) -> str:
@@ -129,17 +131,23 @@ def find_julia_executable(julia_executable: str | None, julia_version: str | Non
     return result.stdout.strip()
 
 
+def temporary_writable_depot_env(env: dict[str, str], tmp: str) -> dict[str, str]:
+    smoke_env = env.copy()
+    depot_path = smoke_env.get("JULIA_DEPOT_PATH")
+    smoke_env["JULIA_DEPOT_PATH"] = os.pathsep.join(
+        [
+            str(Path(tmp) / "depot"),
+            depot_path if depot_path else str(Path.home() / ".julia"),
+            "",
+        ]
+    )
+    smoke_env.setdefault("JULIA_PKG_PRECOMPILE_AUTO", "0")
+    return smoke_env
+
+
 def run_julia_colab_resolve_smoke(julia: str, env: dict[str, str]) -> None:
     with tempfile.TemporaryDirectory(prefix="quip-colab-julia-resolve-") as tmp:
-        smoke_env = env.copy()
-        depot_path = smoke_env.get("JULIA_DEPOT_PATH")
-        smoke_env["JULIA_DEPOT_PATH"] = os.pathsep.join(
-            [
-                str(Path(tmp) / "depot"),
-                depot_path if depot_path else str(Path.home() / ".julia"),
-                "",
-            ]
-        )
+        smoke_env = temporary_writable_depot_env(env, tmp)
         project_dir = Path(tmp) / "Project"
         project_dir.mkdir()
         (project_dir / "Project.toml").write_text("[deps]\n", encoding="utf-8")
@@ -166,11 +174,44 @@ def run_julia_colab_resolve_smoke(julia: str, env: dict[str, str]) -> None:
         run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=smoke_env)
 
 
+def run_julia_colab_project_instantiate_smoke(
+    julia: str,
+    env: dict[str, str],
+    notebook_projects: tuple[str, ...],
+) -> None:
+    for project in notebook_projects:
+        source_project_dir = REPO_ROOT / "notebooks_jl" / "envs" / project
+        with tempfile.TemporaryDirectory(prefix="quip-colab-julia-project-") as tmp:
+            smoke_env = temporary_writable_depot_env(env, tmp)
+            project_dir = Path(tmp) / project
+            project_dir.mkdir()
+            for name in ("Project.toml", "Manifest.toml"):
+                shutil.copy2(source_project_dir / name, project_dir / name)
+
+            code = "\n".join(
+                [
+                    'include("./scripts/notebook_bootstrap.jl")',
+                    "using .QuIPNotebookBootstrap",
+                    "project_dir = ARGS[1]",
+                    f'delete!(ENV, "{ALLOW_VERSION_MISMATCH_ENV}")',
+                    "QuIPNotebookBootstrap.instantiate_project!(project_dir; precompile = false)",
+                    "manifest_version = QuIPNotebookBootstrap.manifest_julia_version(project_dir)",
+                    "if manifest_version != VERSION",
+                    '    error("Expected project smoke manifest Julia version $(VERSION), got $(manifest_version)")',
+                    "end",
+                    'println("Julia Colab project instantiate smoke ok for $(basename(project_dir))")',
+                ]
+            )
+
+            run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=smoke_env)
+
+
 def run_julia_colab_mismatch_smoke(
     *,
     julia_executable: str | None,
     julia_version: str | None,
     notebook_projects: tuple[str, ...],
+    instantiate_projects: tuple[str, ...],
 ) -> None:
     julia = find_julia_executable(julia_executable, julia_version)
     notebook_project_args = [
@@ -225,6 +266,7 @@ def run_julia_colab_mismatch_smoke(
         run([julia, "--project=./scripts", "-e", code, str(project_dir)], env=env)
 
     run_julia_colab_resolve_smoke(julia, env)
+    run_julia_colab_project_instantiate_smoke(julia, env, instantiate_projects)
 
 
 def parse_args() -> argparse.Namespace:
@@ -266,6 +308,17 @@ def parse_args() -> argparse.Namespace:
             "May be passed multiple times; defaults to all Julia Colab notebook projects."
         ),
     )
+    parser.add_argument(
+        "--julia-instantiate-project",
+        action="append",
+        dest="julia_instantiate_projects",
+        choices=DEFAULT_JULIA_NOTEBOOK_PROJECTS,
+        help=(
+            "Notebook project env to instantiate in a temporary Colab-mode copy. "
+            "May be passed multiple times; defaults to the GAMA project that covers "
+            "the Julia 1.12 HDF5_jll resolver regression."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -283,6 +336,9 @@ def main() -> int:
             julia_executable=args.julia,
             julia_version=args.julia_version,
             notebook_projects=tuple(args.julia_notebook_projects or DEFAULT_JULIA_NOTEBOOK_PROJECTS),
+            instantiate_projects=tuple(
+                args.julia_instantiate_projects or DEFAULT_JULIA_INSTANTIATE_PROJECTS
+            ),
         )
 
     return 0

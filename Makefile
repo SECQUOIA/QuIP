@@ -10,6 +10,7 @@ JULIA ?= $(shell JULIA_VERSION=$(JULIA_VERSION) ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
 COLAB_JULIA_VERSION ?= 1.11.9
+COLAB_MISMATCH_JULIA_VERSION ?= 1.12.6
 ifneq ($(filter command line environment override,$(origin JULIA)),)
 COLAB_JULIA ?= $(JULIA)
 else
@@ -65,7 +66,7 @@ verify-julia-colab-smokes:
 	JULIA_BIN=$(COLAB_JULIA) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(COLAB_JULIA) --project=./scripts ./scripts/verify_julia_env_smokes.jl $(COLAB_JULIA_SMOKE_NOTEBOOKS)
 
 verify-julia-colab-mismatch-smoke:
-	$(PYTHON) ./scripts/verify_colab_runtime_smokes.py --skip-python $(COLAB_RUNTIME_SMOKE_FLAGS)
+	COLAB_MISMATCH_JULIA_VERSION=$(COLAB_MISMATCH_JULIA_VERSION) JULIA_DEPOT_PATH=$(COLAB_JULIA_DEPOT_PATH) JULIA_PKG_PRECOMPILE_AUTO=$(JULIA_PKG_PRECOMPILE_AUTO) $(PYTHON) ./scripts/verify_colab_runtime_smokes.py --skip-python $(COLAB_RUNTIME_SMOKE_FLAGS)
 
 verify-julia-notebook5-cache-smoke:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) sync $(COLAB_UV_GROUP_FLAGS)

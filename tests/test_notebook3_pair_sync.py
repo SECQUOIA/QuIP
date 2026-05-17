@@ -181,7 +181,10 @@ class Notebook3PairSyncTests(unittest.TestCase):
 
         self.assertIn("Environment setup", markdown)
         self.assertIn("make setup-julia NOTEBOOK=notebooks_jl/3-GAMA.ipynb", markdown)
-        self.assertIn('BOOTSTRAP = QuIPNotebookBootstrap.bootstrap_notebook("3-GAMA")', code_text)
+        self.assertIn(
+            'BOOTSTRAP = Base.invokelatest(QuIPNotebookBootstrap.bootstrap_notebook, "3-GAMA")',
+            code_text,
+        )
 
     def test_both_notebooks_end_with_the_same_reference_anchor(self) -> None:
         self.assertIn("### References", notebook_markdown(PY_NOTEBOOK))

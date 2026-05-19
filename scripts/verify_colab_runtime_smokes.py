@@ -24,7 +24,12 @@ DEFAULT_JULIA_NOTEBOOK_PROJECTS = (
     "4-DWave",
     "5-Benchmarking",
 )
-DEFAULT_JULIA_INSTANTIATE_PROJECTS = ("3-GAMA",)
+DEFAULT_JULIA_INSTANTIATE_PROJECTS = (
+    "2-QUBO",
+    "3-GAMA",
+    "4-DWave",
+    "5-Benchmarking",
+)
 
 
 def format_cmd(cmd: list[str]) -> str:
@@ -315,8 +320,8 @@ def parse_args() -> argparse.Namespace:
         choices=DEFAULT_JULIA_NOTEBOOK_PROJECTS,
         help=(
             "Notebook project env to instantiate in a temporary Colab-mode copy. "
-            "May be passed multiple times; defaults to the GAMA project that covers "
-            "the Julia 1.12 HDF5_jll resolver regression."
+            "May be passed multiple times; defaults to the D-Wave/QUBO-style Julia "
+            "projects that share the Julia 1.12 HDF5_jll resolver regression risk."
         ),
     )
     return parser.parse_args()

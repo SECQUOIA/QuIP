@@ -201,6 +201,24 @@ function should_resolve_project_for_current_julia(project_dir::AbstractString; i
     return in_colab && manifest_version !== nothing && manifest_version != VERSION
 end
 
+function resolve_project_for_current_julia!(project_dir::AbstractString; in_colab::Bool = detect_colab())
+    should_resolve_project_for_current_julia(project_dir; in_colab = in_colab) || return nothing
+
+    log_step("Resolving Julia packages for current runtime Julia $(VERSION)")
+    try
+        Pkg.resolve()
+    catch err
+        if !in_colab
+            rethrow()
+        end
+
+        @warn "Pkg.resolve() could not refresh $(manifest_path(project_dir)); updating Julia packages for current runtime Julia $(VERSION)." exception = (err, catch_backtrace())
+        log_step("Updating Julia packages for current runtime Julia $(VERSION)")
+        Pkg.update()
+    end
+    return nothing
+end
+
 function candidate_repo_dirs(; cwd::AbstractString = pwd())
     return unique((
         normpath(cwd),
@@ -293,10 +311,7 @@ end
 
 function instantiate_project!(project_dir::AbstractString; precompile::Bool = true)
     activate_project!(project_dir)
-    if should_resolve_project_for_current_julia(project_dir)
-        log_step("Resolving Julia packages for current runtime Julia $(VERSION)")
-        Pkg.resolve()
-    end
+    resolve_project_for_current_julia!(project_dir)
     log_step("Instantiating Julia packages")
     @time Pkg.instantiate()
     if precompile

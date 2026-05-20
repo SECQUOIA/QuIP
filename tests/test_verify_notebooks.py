@@ -152,6 +152,8 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
         self.assertIn("verify-colab-python-runtime-smoke:", makefile)
         self.assertIn("verify-julia-colab-mismatch-smoke:", makefile)
         self.assertIn("./scripts/verify_colab_runtime_smokes.py", makefile)
+        self.assertIn("COLAB_MISMATCH_JULIA_VERSION ?= 1.12.6", makefile)
+        self.assertIn("COLAB_MISMATCH_JULIA_VERSION=$(COLAB_MISMATCH_JULIA_VERSION)", makefile)
 
     def test_smoke_script_covers_reported_colab_failures(self) -> None:
         source = COLAB_RUNTIME_SMOKE_PATH.read_text()
@@ -173,6 +175,11 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
         self.assertIn("instantiate_project!(project_dir; precompile = false)", source)
         self.assertIn("manifest_julia_version(project_dir)", source)
         self.assertIn("Julia Colab resolve smoke ok", source)
+        self.assertIn("DEFAULT_JULIA_INSTANTIATE_PROJECTS = (", source)
+        for project in ["1-MathProg", "2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking"]:
+            self.assertIn(f'"{project}"', source)
+        self.assertIn("run_julia_colab_project_instantiate_smoke", source)
+        self.assertIn("Julia Colab project instantiate smoke ok for $(basename(project_dir))", source)
 
 
 class JuliaSmokeScriptTests(unittest.TestCase):
@@ -198,6 +205,9 @@ class JuliaBootstrapColabMismatchTests(unittest.TestCase):
         self.assertIn("should_resolve_project_for_current_julia", source)
         self.assertIn("Resolving Julia packages for current runtime Julia", source)
         self.assertIn("Pkg.resolve()", source)
+        self.assertIn("Pkg.resolve() could not refresh", source)
+        self.assertIn("Updating Julia packages for current runtime Julia", source)
+        self.assertIn("Pkg.update()", source)
         self.assertIn("Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.", source)
         self.assertNotIn("Restart the notebook with Julia", source)
 
@@ -239,7 +249,12 @@ class WorkflowCoverageTests(unittest.TestCase):
 
         self.assertIn("julia-notebook-smokes:", workflow)
         self.assertIn("make verify-colab-python-runtime-smoke", workflow)
+        self.assertIn('version: "1.12.6"', workflow)
         self.assertIn("make verify-julia-colab-mismatch-smoke", workflow)
+        self.assertLess(
+            workflow.index('version: "1.12.6"'),
+            workflow.index("make verify-julia-colab-mismatch-smoke"),
+        )
         self.assertIn("make verify-julia-colab-smokes COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking", workflow)
         self.assertIn("make verify-julia-notebook5-cache-smoke", workflow)
 
@@ -291,6 +306,7 @@ class JuliaVersionSelectionTests(unittest.TestCase):
         self.assertIn("juliaup add 1.11.5", local_setup)
         self.assertIn("juliaup add 1.11.9", local_setup)
         self.assertIn("COLAB_JULIA_VERSION=1.11.9", local_setup)
+        self.assertIn("COLAB_MISMATCH_JULIA_VERSION=1.12.6", local_setup)
         self.assertIn(".julia-colab-depot", local_setup)
         self.assertIn("make verify-colab-runtime-smokes", local_setup)
         self.assertIn("make verify-colab-python-runtime-smoke", local_setup)

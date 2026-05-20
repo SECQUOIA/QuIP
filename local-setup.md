@@ -88,8 +88,9 @@ The built site will be written to `_build/html/index.html`.
    ```
 
    The Julia notebook checks now resolve the Julia patch version from each
-   notebook manifest. At the moment that means installing both Julia `1.11.5`
-   and Julia `1.11.9` once with `juliaup add 1.11.5` and `juliaup add 1.11.9`.
+   notebook manifest. The checked-in Julia notebook manifests target Julia
+   `1.12.6`, matching the current hosted Colab runtime, so install it once
+   with `juliaup add 1.12.6`.
    If you intentionally want to force one specific binary for every notebook
    execution, set `JULIA_BIN=/path/to/julia` in the environment before you run
    the verification command.
@@ -105,9 +106,7 @@ The built site will be written to `_build/html/index.html`.
    ```
 
    To approximate the current Google Colab Julia runtimes locally, first
-   install Julia `1.11.5`, Julia `1.11.9`, and the current Colab mismatch
-   smoke version, Julia `1.12.6`, once with `juliaup add 1.11.5`,
-   `juliaup add 1.11.9`, and `juliaup add 1.12.6`, then run the
+   install Julia `1.12.6` once with `juliaup add 1.12.6`, then run the
    Colab-style Julia check:
 
    ```bash
@@ -116,18 +115,18 @@ The built site will be written to `_build/html/index.html`.
 
    The notebook-execution portion of this target reads the required Julia patch
    version from each notebook manifest. The smoke targets still use
-   `COLAB_JULIA`, which defaults to Julia `1.11.9` because the remaining Julia
-   smoke notebooks now target that version. If you set `JULIA=/path/to/julia`
-   to a compatible binary on the command line, the smoke targets will reuse
-   that binary unless you override `COLAB_JULIA` explicitly. You can also pick
-   a specific juliaup toolchain for the smoke targets with
-   `COLAB_JULIA_VERSION=1.11.9`. The mismatch smoke uses
-   `COLAB_MISMATCH_JULIA_VERSION=1.12.6` by default so it continues to cover
-   hosted Colab kernels that have moved past the checked-in notebook manifests.
+   `COLAB_JULIA`, which defaults to Julia `1.12.6` because the Julia notebook
+   smoke manifests now target the current Colab runtime. If you set
+   `JULIA=/path/to/julia` to a compatible binary on the command line, the smoke
+   targets will reuse that binary unless you override `COLAB_JULIA`
+   explicitly. You can also pick a specific juliaup toolchain for the smoke
+   targets with `COLAB_JULIA_VERSION=1.12.6`. The mismatch smoke uses
+   `COLAB_MISMATCH_JULIA_VERSION=1.12.6` by default and still exercises
+   synthetic mismatch handling as a guardrail for future hosted runtime moves.
    It also instantiates temporary Colab-mode copies of every Julia notebook
    project, `1-MathProg`, `2-QUBO`, `3-GAMA`, `4-DWave`, and
-   `5-Benchmarking`, so stale transitive manifest pins are exercised before
-   users hit them in hosted notebooks.
+   `5-Benchmarking`, so the checked-in manifests are exercised under the
+   hosted Julia runtime before users hit them in Colab.
    This target writes Julia state into `.julia-colab-depot`, reuses registries
    and cached packages from `~/.julia` when available, executes the Julia math
    programming and QUBO notebooks end to end, and runs import/bootstrap smokes
@@ -147,7 +146,9 @@ The built site will be written to `_build/html/index.html`.
    patch version, the notebook continues and allows `Pkg` to re-resolve the
    environment. If the stale manifest contains a transitive package pin that
    cannot be resolved for the hosted Julia runtime, the Colab bootstrap falls
-   back to updating the notebook environment in that temporary Colab session.
+   back to updating the notebook environment in that temporary Colab session
+   and skips package warmup so users can restart the runtime before loading the
+   refreshed package graph.
    Set `QUIP_ALLOW_JULIA_VERSION_MISMATCH=0` before launching the notebook when
    you intentionally want a strict version check.
 

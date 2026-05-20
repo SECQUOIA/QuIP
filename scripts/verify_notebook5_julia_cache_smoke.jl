@@ -6,6 +6,7 @@ using .QuIPNotebookBootstrap
 QuIPNotebookBootstrap.instantiate_notebook_project("5-Benchmarking"; precompile = false)
 
 using JSON
+using Logging
 
 const TOTAL_READS = 8
 const NOTEBOOK_PATH = normpath(joinpath(@__DIR__, "..", "notebooks_jl", "5-Benchmarking.ipynb"))
@@ -38,7 +39,9 @@ const NOTEBOOK_HELPER_SOURCE = notebook_helper_source()
 
 function build_helper_module(output_dir::AbstractString; reads::Int)
     helpers = Module(:Notebook5CacheSmokeHelpers)
-    Core.eval(helpers, :(using DWave))
+    with_logger(NullLogger()) do
+        Core.eval(helpers, :(using DWave))
+    end
     Core.eval(helpers, :(using JSON))
     Core.eval(helpers, :(using JuMP))
     Core.eval(helpers, :(using LinearAlgebra))
@@ -57,8 +60,10 @@ function build_helper_module(output_dir::AbstractString; reads::Int)
     return helpers
 end
 
+helper_binding(helpers::Module, name::Symbol) = Base.invokelatest(getproperty, helpers, name)
+
 call_helper(helpers::Module, name::Symbol, args...; kwargs...) =
-    Base.invokelatest(getproperty(helpers, name), args...; kwargs...)
+    Base.invokelatest(helper_binding(helpers, name), args...; kwargs...)
 
 function main()
     mktempdir(prefix = "quip-notebook5-cache-smoke-") do tmpdir
@@ -66,7 +71,7 @@ function main()
         _, _, instance_model = call_helper(helpers, :build_random_ising_instance, 7, 4)
         solution_name = joinpath(
             tmpdir,
-            "solutions_7_geometric_5_$(helpers.ANNEAL_CACHE_TAG).json",
+            "solutions_7_geometric_5_$(helper_binding(helpers, :ANNEAL_CACHE_TAG)).json",
         )
 
         sol_miss, time_miss = call_helper(

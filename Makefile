@@ -5,11 +5,11 @@ UV ?= uv
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache
 UV_GROUP_FLAGS ?= --group docs --group mathprog
 JULIA_PKG_PRECOMPILE_AUTO ?= 0
-JULIA_VERSION ?= 1.11.5
+JULIA_VERSION ?= 1.12.6
 JULIA ?= $(shell JULIA_VERSION=$(JULIA_VERSION) ./scripts/find_julia.sh)
 JULIA_HOME_DEPOT ?= $(HOME)/.julia
 JULIA_DEPOT_PATH ?= $(CURDIR)/.julia-depot:$(JULIA_HOME_DEPOT)
-COLAB_JULIA_VERSION ?= 1.11.9
+COLAB_JULIA_VERSION ?= 1.12.6
 COLAB_MISMATCH_JULIA_VERSION ?= 1.12.6
 ifneq ($(filter command line environment override,$(origin JULIA)),)
 COLAB_JULIA ?= $(JULIA)

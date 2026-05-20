@@ -103,7 +103,7 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Setup Julia for Colab mismatch smoke
+      - name: Setup Julia
         uses: julia-actions/setup-julia@v2
         with:
           version: "1.12.6"
@@ -112,14 +112,9 @@ jobs:
         run: |
           make verify-julia-colab-mismatch-smoke
 
-      - name: Setup Julia for notebook smokes
-        uses: julia-actions/setup-julia@v2
-        with:
-          version: "1.11.9"
-
       - name: Run Julia notebook smokes
         run: |
-          make verify-julia-colab-smokes COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking
+          make verify-julia-colab-smokes
           make verify-julia-notebook5-cache-smoke
 
   deploy:

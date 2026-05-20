@@ -17,7 +17,7 @@ function run_smoke(target::AbstractString)
     QuIPNotebookBootstrap.instantiate_scripts_project(precompile = false)
     Core.eval(Main, :(import IJulia))
     QuIPNotebookBootstrap.instantiate_notebook_project(target)
-    Core.eval(Main, import_expr)
+    QuIPNotebookBootstrap.warm_notebook_packages!(key)
     println("$key imports ok")
     return nothing
 end

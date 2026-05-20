@@ -37,6 +37,15 @@ JULIA_NOTEBOOKS = (
         Path(__file__).resolve().parents[1] / "notebooks_jl" / "5-Benchmarking.ipynb",
     ),
 )
+JULIA_PROJECTS = tuple(
+    (project, Path(__file__).resolve().parents[1] / "notebooks_jl" / "envs" / project / "Project.toml")
+    for project, _path in JULIA_NOTEBOOKS
+) + (
+    (
+        "sysimage",
+        Path(__file__).resolve().parents[1] / "notebooks_jl" / "envs" / "sysimage" / "Project.toml",
+    ),
+)
 
 
 def notebook_code(path: Path) -> str:
@@ -98,11 +107,11 @@ class NotebookJuliaVersionTests(unittest.TestCase):
     def test_reads_julia_patch_version_from_notebook_manifest(self) -> None:
         self.assertEqual(
             verify_notebooks.notebook_manifest_julia_version(Path("notebooks_jl/1-MathProg.ipynb")),
-            "1.11.5",
+            "1.12.6",
         )
         self.assertEqual(
             verify_notebooks.notebook_manifest_julia_version(Path("notebooks_jl/5-Benchmarking.ipynb")),
-            "1.11.9",
+            "1.12.6",
         )
 
     @patch("subprocess.run")
@@ -111,10 +120,10 @@ class NotebookJuliaVersionTests(unittest.TestCase):
         run_mock: unittest.mock.Mock,
     ) -> None:
         run_mock.return_value = unittest.mock.Mock(stdout="/tmp/julia\n")
-        path = verify_notebooks.find_julia_executable("1.11.9")
+        path = verify_notebooks.find_julia_executable("1.12.6")
 
         self.assertEqual(path, "/tmp/julia")
-        self.assertEqual(run_mock.call_args.kwargs["env"]["JULIA_VERSION"], "1.11.9")
+        self.assertEqual(run_mock.call_args.kwargs["env"]["JULIA_VERSION"], "1.12.6")
 
 
 class SetupJuliaTargetTests(unittest.TestCase):
@@ -153,6 +162,7 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
         self.assertIn("verify-julia-colab-mismatch-smoke:", makefile)
         self.assertIn("./scripts/verify_colab_runtime_smokes.py", makefile)
         self.assertIn("COLAB_MISMATCH_JULIA_VERSION ?= 1.12.6", makefile)
+        self.assertIn("COLAB_JULIA_VERSION ?= 1.12.6", makefile)
         self.assertIn("COLAB_MISMATCH_JULIA_VERSION=$(COLAB_MISMATCH_JULIA_VERSION)", makefile)
 
     def test_smoke_script_covers_reported_colab_failures(self) -> None:
@@ -188,11 +198,24 @@ class JuliaSmokeScriptTests(unittest.TestCase):
 
         self.assertIn("QuIPNotebookBootstrap.instantiate_scripts_project", source)
         self.assertIn("Core.eval(Main, :(import IJulia))", source)
+        self.assertIn("QuIPNotebookBootstrap.warm_notebook_packages!(key)", source)
         self.assertNotIn("\n    import IJulia\n", source)
         self.assertLess(
             source.index("QuIPNotebookBootstrap.instantiate_scripts_project"),
             source.index("Core.eval(Main, :(import IJulia))"),
         )
+        self.assertLess(
+            source.index("QuIPNotebookBootstrap.instantiate_notebook_project"),
+            source.index("QuIPNotebookBootstrap.warm_notebook_packages!(key)"),
+        )
+
+    def test_julia_notebook_projects_declare_ijulia_for_kernel_extensions(self) -> None:
+        for project, path in JULIA_PROJECTS:
+            with self.subTest(project=project):
+                self.assertIn(
+                    'IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"',
+                    path.read_text(),
+                )
 
 
 class JuliaBootstrapColabMismatchTests(unittest.TestCase):
@@ -208,6 +231,8 @@ class JuliaBootstrapColabMismatchTests(unittest.TestCase):
         self.assertIn("Pkg.resolve() could not refresh", source)
         self.assertIn("Updating Julia packages for current runtime Julia", source)
         self.assertIn("Pkg.update()", source)
+        self.assertIn('get!(ENV, "JULIA_PKG_PRECOMPILE_AUTO", "0")', source)
+        self.assertIn("Skipping package warmup because the notebook environment was refreshed", source)
         self.assertIn("Set $(ALLOW_VERSION_MISMATCH_ENV)=1 to allow a slower re-resolve.", source)
         self.assertNotIn("Restart the notebook with Julia", source)
 
@@ -250,12 +275,14 @@ class WorkflowCoverageTests(unittest.TestCase):
         self.assertIn("julia-notebook-smokes:", workflow)
         self.assertIn("make verify-colab-python-runtime-smoke", workflow)
         self.assertIn('version: "1.12.6"', workflow)
+        self.assertNotIn('version: "1.11.9"', workflow)
         self.assertIn("make verify-julia-colab-mismatch-smoke", workflow)
         self.assertLess(
             workflow.index('version: "1.12.6"'),
             workflow.index("make verify-julia-colab-mismatch-smoke"),
         )
-        self.assertIn("make verify-julia-colab-smokes COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking", workflow)
+        self.assertIn("make verify-julia-colab-smokes", workflow)
+        self.assertNotIn("COLAB_JULIA_SMOKE_NOTEBOOKS=5-Benchmarking", workflow)
         self.assertIn("make verify-julia-notebook5-cache-smoke", workflow)
 
 
@@ -265,6 +292,8 @@ class Notebook5CacheSmokeTests(unittest.TestCase):
 
         self.assertIn("NOTEBOOK_5_BENCHMARK_HELPERS_END", source)
         self.assertIn("Base.include_string", source)
+        self.assertIn("Base.invokelatest(getproperty, helpers, name)", source)
+        self.assertIn("NullLogger()", source)
         self.assertIn("build_random_ising_instance", source)
         self.assertNotIn("\nfunction neal_sample_ising(", source)
         self.assertNotIn("\nfunction load_or_generate_solution(", source)
@@ -300,12 +329,11 @@ class JuliaVersionSelectionTests(unittest.TestCase):
         self.assertIn(f"COLAB_JULIA_VERSION ?= {benchmarking_version}", makefile)
         self.assertIn(f'version: "{benchmarking_version}"', workflow)
 
-    def test_local_setup_documents_the_mixed_julia_patch_versions(self) -> None:
+    def test_local_setup_documents_the_colab_julia_patch_version(self) -> None:
         local_setup = LOCAL_SETUP_PATH.read_text()
 
-        self.assertIn("juliaup add 1.11.5", local_setup)
-        self.assertIn("juliaup add 1.11.9", local_setup)
-        self.assertIn("COLAB_JULIA_VERSION=1.11.9", local_setup)
+        self.assertIn("juliaup add 1.12.6", local_setup)
+        self.assertIn("COLAB_JULIA_VERSION=1.12.6", local_setup)
         self.assertIn("COLAB_MISMATCH_JULIA_VERSION=1.12.6", local_setup)
         self.assertIn(".julia-colab-depot", local_setup)
         self.assertIn("make verify-colab-runtime-smokes", local_setup)

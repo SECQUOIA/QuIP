@@ -202,8 +202,11 @@ function should_resolve_project_for_current_julia(project_dir::AbstractString; i
 end
 
 function resolve_project_for_current_julia!(project_dir::AbstractString; in_colab::Bool = detect_colab())
-    should_resolve_project_for_current_julia(project_dir; in_colab = in_colab) || return nothing
+    should_resolve_project_for_current_julia(project_dir; in_colab = in_colab) || return false
 
+    if in_colab
+        get!(ENV, "JULIA_PKG_PRECOMPILE_AUTO", "0")
+    end
     log_step("Resolving Julia packages for current runtime Julia $(VERSION)")
     try
         Pkg.resolve()
@@ -216,7 +219,7 @@ function resolve_project_for_current_julia!(project_dir::AbstractString; in_cola
         log_step("Updating Julia packages for current runtime Julia $(VERSION)")
         Pkg.update()
     end
-    return nothing
+    return true
 end
 
 function candidate_repo_dirs(; cwd::AbstractString = pwd())
@@ -311,14 +314,14 @@ end
 
 function instantiate_project!(project_dir::AbstractString; precompile::Bool = true)
     activate_project!(project_dir)
-    resolve_project_for_current_julia!(project_dir)
+    refreshed_for_current_julia = resolve_project_for_current_julia!(project_dir)
     log_step("Instantiating Julia packages")
     @time Pkg.instantiate()
     if precompile
         log_step("Precompiling Julia packages")
         @time Pkg.precompile()
     end
-    return nothing
+    return refreshed_for_current_julia
 end
 
 function warm_notebook_packages!(
@@ -371,8 +374,10 @@ function bootstrap_notebook(
         configure_python_runtime!(repo_dir; in_colab = in_colab, python_packages = python_packages)
     end
 
-    instantiate_project!(project_dir; precompile = precompile)
-    if warm_packages
+    refreshed_for_current_julia = instantiate_project!(project_dir; precompile = precompile)
+    if warm_packages && refreshed_for_current_julia
+        log_step("Skipping package warmup because the notebook environment was refreshed for Julia $(VERSION). Restart the runtime and rerun this setup cell for a clean package load before continuing.")
+    elseif warm_packages
         warm_notebook_packages!(project_key; suppress_logs = suppress_warmup_logs)
     end
 

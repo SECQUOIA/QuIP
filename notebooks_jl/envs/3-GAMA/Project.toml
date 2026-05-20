@@ -2,6 +2,7 @@
 BinaryWrappers = "f01c122e-0ea1-4f85-ad8f-907073ad7a9f"
 DWave = "4d534982-bf11-4157-9e48-fe3a62208a50"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Measures = "442fdcdd-2543-5da2-b0f3-8c86c306513e"

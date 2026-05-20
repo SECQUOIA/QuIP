@@ -25,6 +25,7 @@ DEFAULT_JULIA_NOTEBOOK_PROJECTS = (
     "5-Benchmarking",
 )
 DEFAULT_JULIA_INSTANTIATE_PROJECTS = (
+    "1-MathProg",
     "2-QUBO",
     "3-GAMA",
     "4-DWave",
@@ -320,8 +321,7 @@ def parse_args() -> argparse.Namespace:
         choices=DEFAULT_JULIA_NOTEBOOK_PROJECTS,
         help=(
             "Notebook project env to instantiate in a temporary Colab-mode copy. "
-            "May be passed multiple times; defaults to the D-Wave/QUBO-style Julia "
-            "projects that share the Julia 1.12 HDF5_jll resolver regression risk."
+            "May be passed multiple times; defaults to all Julia notebook projects."
         ),
     )
     return parser.parse_args()

@@ -124,10 +124,10 @@ The built site will be written to `_build/html/index.html`.
    `COLAB_JULIA_VERSION=1.11.9`. The mismatch smoke uses
    `COLAB_MISMATCH_JULIA_VERSION=1.12.6` by default so it continues to cover
    hosted Colab kernels that have moved past the checked-in notebook manifests.
-   It also instantiates temporary Colab-mode copies of the D-Wave/QUBO-style
-   Julia projects, `2-QUBO`, `3-GAMA`, `4-DWave`, and `5-Benchmarking`, so
-   stale transitive manifest pins are exercised before users hit them in
-   hosted notebooks.
+   It also instantiates temporary Colab-mode copies of every Julia notebook
+   project, `1-MathProg`, `2-QUBO`, `3-GAMA`, `4-DWave`, and
+   `5-Benchmarking`, so stale transitive manifest pins are exercised before
+   users hit them in hosted notebooks.
    This target writes Julia state into `.julia-colab-depot`, reuses registries
    and cached packages from `~/.julia` when available, executes the Julia math
    programming and QUBO notebooks end to end, and runs import/bootstrap smokes

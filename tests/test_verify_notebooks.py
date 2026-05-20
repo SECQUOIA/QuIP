@@ -176,7 +176,7 @@ class ColabRuntimeSmokeTests(unittest.TestCase):
         self.assertIn("manifest_julia_version(project_dir)", source)
         self.assertIn("Julia Colab resolve smoke ok", source)
         self.assertIn("DEFAULT_JULIA_INSTANTIATE_PROJECTS = (", source)
-        for project in ["2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking"]:
+        for project in ["1-MathProg", "2-QUBO", "3-GAMA", "4-DWave", "5-Benchmarking"]:
             self.assertIn(f'"{project}"', source)
         self.assertIn("run_julia_colab_project_instantiate_smoke", source)
         self.assertIn("Julia Colab project instantiate smoke ok for $(basename(project_dir))", source)

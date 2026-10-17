@@ -35,6 +35,38 @@ The built site will be written to `_build/html/index.html`.
 
 ## Notebook Execution
 
+### D-Wave cache security
+
+The D-Wave QPU notebook cells explicitly disable persistent HTTP metadata
+caches with Cloud Client's supported `cache_home="off"` setting. The Python
+setup also sets `DWAVE_CACHE_HOME=off` for its `dwave setup` and `dwave ping`
+subprocesses. Before running those commands in a separate local shell, use:
+
+```bash
+export DWAVE_CACHE_HOME=off
+uv run --group qubo dwave setup
+uv run --group qubo dwave ping
+```
+
+Use the manual API-token setup shown in the notebooks. OAuth commands such as
+`dwave setup --auth`, `dwave setup --oob`, and `dwave auth` use a separate
+persistent credential database; disabling HTTP caches does not protect it.
+Do not use those flows with credential files or directories writable by
+untrusted users.
+
+This mitigates the maintained manual-token notebook paths; it does not patch
+the installed DiskCache dependency or make other pickle files safe to load.
+[GHSA-w8v5-vhqr-4h9v](https://github.com/advisories/GHSA-w8v5-vhqr-4h9v) has no
+patched release listed. [Issue #31](https://github.com/SECQUOIA/QuIP/issues/31)
+tracks the remaining upstream dependency fix and stays open. The dependency
+alert is retained. D-Wave functionality and the locked environment are preserved.
+
+The Colab Python runtime smoke verifies real region/solver metadata requests
+using mocked HTTP transport and rejects any DiskCache or OAuth-store access.
+It does not submit a QPU job.
+
+### Selecting notebook environments
+
 4. To work on the Python notebooks locally, install the notebook-specific
    dependencies into the same `uv` environment:
 

@@ -20,3 +20,19 @@ website.
 Notebook-level author attributions remain inside the notebooks themselves. The
 book homepage and site-level metadata are managed separately from this GitHub
 README.
+
+## Dependency security updates
+
+Dependabot opens grouped security-update PRs for the maintained dependency
+manifests and security updates for GitHub Actions. Routine version-update PRs
+are disabled. Archived results and vendored source snapshots are excluded.
+
+A separate workflow merges same-repository Dependabot PRs into the default
+branch only after every required PR CI job and all reported checks succeed,
+with no blocking reviews or unresolved review threads. It verifies the current
+head SHA, retries temporary unknown mergeability, and never executes PR code
+with write credentials. GitHub deletes merged branches automatically.
+
+Merges made with `GITHUB_TOKEN` do not trigger downstream push workflows.
+After a dependency merge, the automation explicitly dispatches the trusted
+default-branch book build and deployment so the published site stays current.

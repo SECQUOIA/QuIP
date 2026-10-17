@@ -2,7 +2,7 @@ name: Merge passing Dependabot PRs
 
 on:
   workflow_run:
-    workflows: ["Build and Deploy Jupyter Book", "CodeQL"]
+    workflows: ["Build and Deploy Jupyter Book", "CodeQL", "Test Dependabot merge guard"]
     types: [completed]
 
 # A separate workflow gives Dependabot CI read-only permissions. Never check out
@@ -114,7 +114,7 @@ jobs:
                     pullRequest(number: $number) {
                       headRefOid
                       reviewDecision
-                      latestReviews(first: 100) {
+                      latestReviews: latestOpinionatedReviews(first: 100) {
                         pageInfo { hasNextPage }
                         nodes { state }
                       }

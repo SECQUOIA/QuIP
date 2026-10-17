@@ -94,6 +94,7 @@ def run_python_ocean_smoke(python_executable: str) -> None:
                 ),
             ]
         )
+        run([str(python), str(REPO_ROOT / "scripts" / "verify_dwave_cache_safety.py")])
 
 
 def run_python_qci_setup_smoke() -> None:
@@ -220,6 +221,7 @@ def run_julia_colab_mismatch_smoke(
     instantiate_projects: tuple[str, ...],
 ) -> None:
     julia = find_julia_executable(julia_executable, julia_version)
+    run([sys.executable, str(REPO_ROOT / "scripts" / "verify_dwave_cache_safety.py"), "--julia", julia])
     notebook_project_args = [
         str(REPO_ROOT / "notebooks_jl" / "envs" / project)
         for project in notebook_projects

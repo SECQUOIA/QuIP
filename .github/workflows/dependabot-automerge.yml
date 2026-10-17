@@ -93,6 +93,21 @@ jobs:
                 core.info('Every required CI job must pass.');
                 continue;
               }
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: pr.number, per_page: 100,
+              });
+              const dependencyFiles = new Set(['pyproject.toml', 'uv.lock', 'requirements-book.txt']);
+              const dependencyOnly = files.length > 0 && files.every(file => dependencyFiles.has(file.filename));
+              // Default CodeQL setup can omit Actions analysis for dependency-only
+              // changes. Accept only its specific neutral Actions-config warning.
+              const neutralCodeQLIds = new Set(dependencyOnly ?
+                (await github.paginate(github.rest.checks.listForRef, {
+                  owner, repo, ref: run.head_sha, per_page: 100,
+                })).filter(check => check.name === 'CodeQL' && check.status === 'completed' &&
+                  check.conclusion === 'neutral' && check.app?.slug === 'github-advanced-security' &&
+                  check.output?.title === '1 configuration not found' &&
+                  (check.output.summary || '').includes('/language:actions'))
+                  .map(check => check.node_id) : []);
               const result = await github.graphql(`
                 query($owner: String!, $repo: String!, $number: Int!) {
                   repository(owner: $owner, name: $repo) {
@@ -113,7 +128,7 @@ jobs:
                           contexts(first: 100) {
                             pageInfo { hasNextPage }
                             nodes {
-                              ... on CheckRun { name status conclusion }
+                              ... on CheckRun { id name status conclusion }
                               ... on StatusContext { context state }
                             }
                           }
@@ -135,7 +150,8 @@ jobs:
                     check.status === 'COMPLETED' && check.conclusion === 'SUCCESS')) ||
                   checks.contexts.nodes.some(check => check.status
                     ? check.status !== 'COMPLETED' || (check.conclusion !== 'SUCCESS' &&
-                      !(check.conclusion === 'SKIPPED' && allowedSkips.has(check.name)))
+                      !(check.conclusion === 'SKIPPED' && allowedSkips.has(check.name)) &&
+                      !(check.conclusion === 'NEUTRAL' && check.name === 'CodeQL' && neutralCodeQLIds.has(check.id)))
                     : check.state !== 'SUCCESS')) {
                 core.info(`PR #${pr.number} still has pending checks or review blockers.`);
                 continue;

@@ -2,7 +2,7 @@
 name = "quip"
 version = "0.1.0"
 description = "Jupyter Book and notebook environments for SECQUOIA QuIP materials."
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = []
 
 [dependency-groups]

@@ -273,6 +273,16 @@ class WorkflowCoverageTests(unittest.TestCase):
         workflow = WORKFLOW_PATH.read_text()
 
         self.assertIn("julia-notebook-smokes:", workflow)
+        self.assertIn('python-version: "3.11"', workflow)
+        self.assertNotIn('python-version: "3.10"', workflow)
+        self.assertEqual(
+            (WORKFLOW_PATH.parents[2] / ".python-version").read_text().strip(),
+            "3.11",
+        )
+        self.assertIn(
+            'requires-python = ">=3.11,<3.13"',
+            (WORKFLOW_PATH.parents[2] / "pyproject.toml").read_text(),
+        )
         self.assertIn("make verify-colab-python-runtime-smoke", workflow)
         self.assertIn('version: "1.12.6"', workflow)
         self.assertNotIn('version: "1.11.9"', workflow)
